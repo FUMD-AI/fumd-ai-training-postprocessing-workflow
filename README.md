@@ -257,19 +257,48 @@ notebook -- it's a validated design (~95% top-1 / ~99% top-2 accuracy across
 ## Validation status
 
 `src/fumd_training_workflow/data.py`, `evaluate.py`, `metrics_io.py`,
-`bs_location.py`, and `migration_map.py`, and Steps 1, 3 (its
-non-TensorFlow logic; TensorFlow itself was stubbed out for this check),
-4, 5, and 6 have each been exercised end-to-end against real data (the
-bundled example slice, plus synthetic RSRP/event data for Steps 5-6) in the
-course of building this workflow. `model.py` (`build_model`,
-`BahdanauAttention`) and Step 2's actual training run have been reviewed
-carefully and pass a plain syntax check, but **have not been executed**
-end-to-end -- no TensorFlow install was available in the environment this
-workflow was built in. Run `run_pipeline.ipynb` (or Steps 1-2 individually)
-against the bundled example with a small `EPOCHS` as a first real check
-before a full training run.
+`bs_location.py`, and `migration_map.py`, and Steps 1, 4, 5, and 6 have
+each been exercised end-to-end against real data (the bundled example
+slice, plus synthetic RSRP/event data for Steps 5-6) in the course of
+building this workflow.
+
+`model.py`, Step 2 (training), Step 3 (evaluation), and the full
+`run_pipeline.ipynb` chain were originally only reviewed and syntax-checked
+-- no TensorFlow install was available in the environment this workflow
+was built in -- but have since been run for real (`jupyter execute
+run_pipeline.ipynb` on macOS/Apple Silicon, `tensorflow-macos==2.14.0`,
+Python 3.10.9) against a full preprocessing run (1,199 vehicles, 123,203
+rows, `dataset_labeled_w3.csv`), 5 epochs. Results: top-1 accuracy 95.5%
+at +1s degrading to 92.0% at +7s (top-2 accuracy stays above 99% across
+the whole horizon), matching the expected pattern of forecasts getting
+harder further into the future. The migration-window accuracy breakdown
+(a capability the original exploratory notebooks didn't have) shows
+exactly the signal it's meant to surface: 97.6% accuracy on steady-state
+rows vs. 70.5% in the pre-handover warning window -- the model is
+noticeably worse right before a real handover, which is the harder and
+more operationally relevant case. This run also caught and fixed four
+real bugs the original build/test pass (lacking any TensorFlow
+environment) couldn't have caught: a `jupyter execute` working-directory
+bug affecting every standalone step-notebook invocation (see "Execution
+environment" above), `inject_parameters()` generating invalid Python
+for `None`/boolean parameter values, `inject_parameters()` silently
+undefining any parameter a caller didn't explicitly override, and a
+`Lambda`-layer model architecture choice that Keras's `.keras` safe-mode
+deserialization refuses to reload (`model.py` now uses a proper
+subclassed `ZeroInitialState` layer instead). Steps 5-6 and the
+Slurm-submitted standalone-notebook path (as opposed to the
+`run_pipeline.ipynb` chain) have not yet had a from-scratch confirmation
+run since those fixes landed -- worth a first real Slurm submission
+before fully trusting that path.
 
 ## Development notes
+
+**v0.1.1**: first real (non-syntax-check-only) TensorFlow execution of
+`model.py`/Step 2/Step 3/`run_pipeline.ipynb`, against a full preprocessing
+run rather than only the bundled example. Fixed four bugs this surfaced --
+see "Validation status" above for what and why. No architectural or
+parameter changes beyond the `Lambda` -> `ZeroInitialState` layer swap
+(models trained with v0.1.0 are not loadable with this version; retrain).
 
 **v0.1.0** initial release: rebuilds the five exploratory notebooks listed
 above as this parameterized pipeline. See "Notes on the source notebooks"
