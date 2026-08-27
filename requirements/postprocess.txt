@@ -1,13 +1,10 @@
-# Steps 5-6 (BS-location estimation, migration-event maps) -- plain
-# pandas/scikit-learn/matplotlib, no GPU and no dependency on the pinned
-# requirements/train.txt image. Run these locally (see each notebook's own
-# "No GPU needed" note), not through slurm/*.sbatch.
+# Step 5 (migration-event maps) -- plain pandas/matplotlib, no GPU and no
+# dependency on the pinned requirements/train.txt image. Run it locally
+# (see the notebook's own "No GPU needed" note), not through slurm/*.sbatch.
 pandas
 numpy
-scikit-learn
 matplotlib
-seaborn
 
 # Only needed for the optional real street-map background
-# (OSM_PBF_PATH / plot_sites_on_osm, plot_events_by_type's `edges` param):
+# (OSM_PBF_PATH / plot_events_by_type's `edges` param):
 pyrosm

@@ -4,8 +4,7 @@ Trains and evaluates a BiLSTM + Bahdanau-attention model that forecasts a
 vehicle's cellular serving cell 1-7 seconds ahead, from the AI-ready dataset
 produced by the [FUMD-AI preprocessing workflow](https://github.com/FUMD-AI/fumd-ai-preprocessing-workflow)
 (`dataset_labeled_w<W>.csv`), then postprocesses the results: training-metrics
-comparison across runs, real-measurement base-station location estimation,
-and spatial mapping of handover/migration events.
+comparison across runs and spatial mapping of handover/migration events.
 
 ## Quick start
 
@@ -42,10 +41,10 @@ single-command orchestration of the GPU steps.
 
 ## Pipeline overview
 
-Six notebooks. Steps 1-4 form the core chain from the preprocessing
-workflow's labeled dataset to a trained, evaluated model; Steps 5-6 are
-optional postprocessing that need your own real-world data (not simulation
-output) and no GPU.
+Five notebooks. Steps 1-4 form the core chain from the preprocessing
+workflow's labeled dataset to a trained, evaluated model; Step 5 is
+optional postprocessing that runs directly against the preprocessing
+workflow's own output and needs no GPU.
 
 | # | Notebook | Purpose | Input (default) | Output (default) | GPU? |
 |---|----------|---------|-------|--------|------|
@@ -53,8 +52,7 @@ output) and no GPU.
 | 2 | `step_2_train_model.ipynb` | Build and train the BiLSTM + Bahdanau-attention forecaster on Step 1's windows. | Step 1 output | `model.keras`, `training_history.json`, `training_curves.png` | **yes** |
 | 3 | `step_3_evaluate_model.ipynb` | Evaluate on the run's own validation split (+ a `migration`-state accuracy breakdown), and optionally on other datasets for a cross-run generalization check. | Step 2 output | `metrics_<run_label>.csv`/`.json` | yes (predict-only) |
 | 4 | `step_4_aggregate_training_metrics.ipynb` | Compare Step 3 metrics across runs/variants -- tables and plots. | one or more Step 3 output dirs | `metrics_long.csv`, `metrics_summary.csv`, comparison plots | no |
-| 5 *(optional)* | `step_5_estimate_bs_locations.ipynb` | Estimate real base-station site coordinates from measured RSRP data. **Bring your own data** -- nothing bundled. | your own RSRP CSV | `bs_sites.csv`, `coverage_and_sites.pdf` | no |
-| 6 *(optional)* | `step_6_map_migration_events.ipynb` | Plot handover/migration events by type and destination cell over vehicle positions, optionally with real BS coordinates and a street map. | preprocessing's own `dataset_labeled_w<W>.csv` + `events_all_w<W>.csv` | `migration_events_by_type.pdf` | no |
+| 5 *(optional)* | `step_5_map_migration_events.ipynb` | Plot handover/migration events by type and destination cell over vehicle positions, optionally with real BS coordinates and a street map. | preprocessing's own `dataset_labeled_w<W>.csv` + `events_all_w<W>.csv` | `migration_events_by_type.pdf` | no |
 
 `run_pipeline.ipynb` chains Steps 1-4 for local/interactive use (see
 "Execution environment" for why it isn't meant for the Slurm-submitted GPU
@@ -122,13 +120,13 @@ Two separate requirement sets, matching the two execution contexts above:
   `tensorflow==2.14.0`, `keras==2.14.0`, `scikit-learn==1.5.2`, Python
   3.10.9, ...) so a local dev environment behaves identically to the GPU
   cluster.
-- `requirements/postprocess.txt` -- Steps 5-6, plain
-  pandas/scikit-learn/matplotlib(+`pyrosm` for the optional street-map
-  plots), unpinned, meant to run locally rather than through the `.sif`.
+- `requirements/postprocess.txt` -- Step 5, plain
+  pandas/matplotlib (+ `pyrosm` for the optional street-map plots),
+  unpinned, meant to run locally rather than through the `.sif`.
 
 ```
 pip install -r requirements/train.txt          # Steps 1-4
-pip install -r requirements/postprocess.txt     # Steps 5-6 (separate environment)
+pip install -r requirements/postprocess.txt     # Step 5 (separate environment)
 ```
 
 ## Example data
@@ -142,10 +140,7 @@ the pipeline mechanics work), this one is real simulation output, chosen to
 include actual `migration` events so Step 1's sliding windows and Step 3's
 migration-state accuracy breakdown both have something to show.
 `example-data/events_all_example.csv` is the matching slice of that run's
-`events_all_w3.csv`, for Step 6.
-
-Steps 5-6 have no bundled example -- see their own "bring your own data"
-notes above.
+`events_all_w3.csv`, for Step 5.
 
 ## Repository layout
 
@@ -159,7 +154,7 @@ notes above.
 ├── ro-crate-metadata.json       FAIR/WorkflowHub packaging metadata
 ├── requirements/
 │   ├── train.txt                Steps 1-4 (pinned to the .sif image)
-│   └── postprocess.txt           Steps 5-6 (local, unpinned)
+│   └── postprocess.txt           Step 5 (local, unpinned)
 ├── slurm/
 │   ├── train_model.sbatch        Step 2 Slurm/Singularity submission template
 │   └── evaluate_model.sbatch     Step 3 Slurm/Singularity submission template
@@ -173,26 +168,31 @@ notes above.
 │       ├── model.py              BahdanauAttention layer + build_model()
 │       ├── evaluate.py           metrics: loss/accuracy/precision/recall/F1/top-2/confusion matrix, migration breakdown
 │       ├── metrics_io.py         structured (CSV/JSON) metrics read/write
-│       ├── bs_location.py        real-measurement BS site estimation (Step 5)
-│       ├── migration_map.py      migration-event spatial plotting (Step 6)
+│       ├── migration_map.py      migration-event spatial plotting (Step 5)
 │       └── notebook_runner.py    minimal parameter-injection + execution (run_pipeline.ipynb only)
 └── notebooks/
     ├── step_1_load_and_window_dataset.ipynb
     ├── step_2_train_model.ipynb
     ├── step_3_evaluate_model.ipynb
     ├── step_4_aggregate_training_metrics.ipynb
-    ├── step_5_estimate_bs_locations.ipynb
-    └── step_6_map_migration_events.ipynb
+    └── step_5_map_migration_events.ipynb
 ```
 
 ## Notes on the source notebooks
 
-This workflow rebuilds five one-off exploratory notebooks
+This workflow rebuilds four one-off exploratory notebooks
 (`combined_TimeSequence_*_BahdanauAtention_encoder_2BLSTM.ipynb`,
-`leer_metricas.ipynb`, `estimacion_antenas.ipynb`,
-`mapa_EB_K_mapAlacant.ipynb`, `mapa_EB_K-mapAveiro.ipynb`) as a parameterized
-pipeline against the *new* preprocessing workflow's dataset schema, fixing
-several issues found along the way rather than preserving them:
+`leer_metricas.ipynb`, `mapa_EB_K_mapAlacant.ipynb`,
+`mapa_EB_K-mapAveiro.ipynb`) as a parameterized pipeline against the *new*
+preprocessing workflow's dataset schema, fixing several issues found along
+the way rather than preserving them. A fifth exploratory notebook,
+`estimacion_antenas.ipynb` (real-measurement base-station location
+estimation from RSRP data), was refactored into `step_5_estimate_bs_locations.ipynb`
+/ `bs_location.py`, but has since been removed: no real RSRP measurement
+data exists anywhere in this project's connected folders to exercise or
+validate it against, only a hand-built synthetic fixture, so it was
+dropped rather than shipped untested. Its logic remains available in this
+repository's git history if real measurement data becomes available later.
 
 - **Dataset schema.** The exploratory notebooks were written against an
   older, ad hoc CSV format (`newCombinedPast_vehicles_<id>.csv`) that
@@ -256,10 +256,9 @@ notebook -- it's a validated design (~95% top-1 / ~99% top-2 accuracy across
 
 ## Validation status
 
-`src/fumd_training_workflow/data.py`, `evaluate.py`, `metrics_io.py`,
-`bs_location.py`, and `migration_map.py`, and Steps 1, 4, 5, and 6 have
-each been exercised end-to-end against real data (the bundled example
-slice, plus synthetic RSRP/event data for Steps 5-6) in the course of
+`src/fumd_training_workflow/data.py`, `evaluate.py`, `metrics_io.py`, and
+`migration_map.py`, and Steps 1, 4, and 5 have each been exercised
+end-to-end against real data (the bundled example slice) in the course of
 building this workflow.
 
 `model.py`, Step 2 (training), Step 3 (evaluation), and the full
@@ -285,7 +284,7 @@ for `None`/boolean parameter values, `inject_parameters()` silently
 undefining any parameter a caller didn't explicitly override, and a
 `Lambda`-layer model architecture choice that Keras's `.keras` safe-mode
 deserialization refuses to reload (`model.py` now uses a proper
-subclassed `ZeroInitialState` layer instead). Steps 5-6 and the
+subclassed `ZeroInitialState` layer instead). Step 5 and the
 Slurm-submitted standalone-notebook path (as opposed to the
 `run_pipeline.ipynb` chain) have not yet had a from-scratch confirmation
 run since those fixes landed -- worth a first real Slurm submission
@@ -293,12 +292,16 @@ before fully trusting that path.
 
 ## Development notes
 
-**v0.1.1**: first real (non-syntax-check-only) TensorFlow execution of
-`model.py`/Step 2/Step 3/`run_pipeline.ipynb`, against a full preprocessing
-run rather than only the bundled example. Fixed four bugs this surfaced --
-see "Validation status" above for what and why. No architectural or
-parameter changes beyond the `Lambda` -> `ZeroInitialState` layer swap
-(models trained with v0.1.0 are not loadable with this version; retrain).
+**v0.1.1** (unreleased): first real (non-syntax-check-only) TensorFlow
+execution of `model.py`/Step 2/Step 3/`run_pipeline.ipynb`, against a full
+preprocessing run rather than only the bundled example. Fixed four bugs
+this surfaced -- see "Validation status" above for what and why. No
+architectural or parameter changes beyond the `Lambda` -> `ZeroInitialState`
+layer swap (models trained with v0.1.0 are not loadable with this version;
+retrain). Also dropped the real-measurement base-station-location-estimation
+step (`step_5_estimate_bs_locations.ipynb` / `bs_location.py`) and
+renumbered the migration-event-mapping step from Step 6 to Step 5 -- see
+"Notes on the source notebooks" for why.
 
 **v0.1.0** initial release: rebuilds the five exploratory notebooks listed
 above as this parameterized pipeline. See "Notes on the source notebooks"
@@ -343,8 +346,8 @@ on WorkflowHub.
 [Workflow RO-Crate](https://w3id.org/workflowhub/workflow-ro-crate/1.0)
 (RO-Crate 1.1 + the WorkflowHub workflow profile), the packaging format
 WorkflowHub registration expects: `run_pipeline.ipynb` is the crate's main
-workflow entity (chaining Steps 1-4), Steps 5-6 are separately described as
-their own optional workflow entities, and every notebook parameter is
+workflow entity (chaining Steps 1-4), Step 5 is separately described as its
+own optional workflow entity, and every notebook parameter is
 recorded as a `FormalParameter` with its description and default value, so
 the crate stays consistent with each notebook's own `parameters` cell. It
 also records authorship/ORCIDs, the FUMD-AI funding grant, licensing, and

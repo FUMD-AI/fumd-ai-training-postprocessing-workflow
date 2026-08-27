@@ -2,7 +2,7 @@
 =============================================================================
 FUMD-AI Training Workflow -- shared library: spatial migration-event maps
 =============================================================================
-Used by: notebooks/step_6_map_migration_events.ipynb
+Used by: notebooks/step_5_map_migration_events.ipynb
 
 Author(s):
   - Cristina Bernad (ORCID: 0000-0001-9537-415X)
@@ -17,15 +17,14 @@ SPDX-License-Identifier: MIT
 
 Matches handover/migration events to the vehicle position at the moment
 they occurred, then plots them grouped by event type and colored by
-destination cell -- optionally over a real street map and real base-station
-coordinates (see bs_location.py).
+destination cell -- optionally over a real street map and real
+base-station coordinates, supplied as a plain dict (see `BS_COORDS` below).
 
 Refactored from `mapa_EB_K_mapAlacant.ipynb` / `mapa_EB_K-mapAveiro.ipynb`,
 generalized so base-station coordinates are always a parameter (a plain
 `{cell_id: (lon, lat)}` dict) instead of duplicated per-city notebook
-constants -- build one from `bs_location.cluster_sites`'s output, or from a
-hand-curated dict of known site coordinates like the original Alicante
-notebook used.
+constants -- a hand-curated dict of known site coordinates, the way the
+original Alicante notebook worked.
 
 Default data inputs are the FUMD-AI preprocessing workflow's own
 `dataset_labeled_w<W>.csv` (positions) and `events_all_w<W>.csv` (handover
@@ -33,13 +32,13 @@ events) -- both already directly compatible, so unlike the original
 notebooks this needs no bespoke intermediate files
 (`dataset_con_migration_v5_*.csv` / `eventos_todoss_*.csv`).
 
-Note: a real-measurement site id from `bs_location.py` (clustered from
-actual RSRP data) and a simulation's abstract `servingCell`/`destination`
-id are two different numbering domains -- there is no automatic way to
-match "this physical site" to "this simulation cell id". Building the
-`bs_coords` dict passed to the plotting functions below is a manual,
-domain-knowledge step (as the original Alicante notebook did by hand);
-this module does not attempt to infer that mapping.
+Note: a real-measurement site id (e.g. clustered from actual RSRP data)
+and a simulation's abstract `servingCell`/`destination` id are two
+different numbering domains -- there is no automatic way to match "this
+physical site" to "this simulation cell id". Building the `bs_coords` dict
+passed to the plotting functions below is a manual, domain-knowledge step
+(as the original Alicante notebook did by hand); this module does not
+attempt to infer that mapping.
 """
 
 from __future__ import annotations
@@ -142,8 +141,8 @@ def plot_events_by_type(
     """
     Grid of subplots, one per event `case_short`, scattering matched event
     positions colored by `bs_group`. Optionally overlays `bs_coords`
-    (`{cell_id: (lon, lat)}`, e.g. from bs_location.py or a hand-curated
-    dict) and a street network (`edges`, from `pyrosm`'s
+    (`{cell_id: (lon, lat)}`, a hand-curated dict of known site
+    coordinates) and a street network (`edges`, from `pyrosm`'s
     `OSM.get_network(...)`, plotted first as a gray background if given --
     both fully optional so this works with only simulation output.
     """

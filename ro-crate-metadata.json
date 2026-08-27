@@ -20,7 +20,7 @@
       "@id": "./",
       "@type": "Dataset",
       "name": "FUMD-AI Training & Postprocessing Workflow",
-      "description": "Trains and evaluates a BiLSTM + Bahdanau-attention model that forecasts a vehicle's serving cell 1-7 seconds ahead from the FUMD-AI preprocessing workflow's AI-ready labeled dataset (dataset_labeled_w<W>.csv), then postprocesses the results. Six Jupyter notebooks cover the pipeline: window the dataset and fit encoders/scaler (1), train the model (2), evaluate it on a held-out split plus optional cross-run generalization checks (3), aggregate and compare metrics across runs (4), estimate real base-station site coordinates from measured RSRP data (5, bring-your-own-data), and map handover/migration events spatially by type and destination cell (6). A local/interactive orchestrator notebook, run_pipeline.ipynb, chains Steps 1-4 via one set of top-level parameters and runs out of the box against a bundled example data slice; Steps 5-6 are optional, bring-your-own-data postprocessing steps run standalone. Steps 1-3 are GPU/Slurm workloads intended to run inside a pinned Singularity/Apptainer container (see requirements/train.txt and slurm/*.sbatch) via bare `jupyter execute` -- there is no papermill in the target execution image, so headless parameterization is done by src/fumd_training_workflow/notebook_runner.py, a small nbformat/nbclient-based replacement (see that module's docstring), or by hand-editing each notebook's own tagged parameters cell before Slurm submission. Steps 4-6 are local/no-GPU postprocessing steps. See README.md for the full step-by-step description, inputs/outputs, execution environment, and validation status. Unless otherwise indicated, source code is MIT-licensed and explanatory text/figures are CC BY 4.0; input datasets retain the licences stated in their own metadata/source records.",
+      "description": "Trains and evaluates a BiLSTM + Bahdanau-attention model that forecasts a vehicle's serving cell 1-7 seconds ahead from the FUMD-AI preprocessing workflow's AI-ready labeled dataset (dataset_labeled_w<W>.csv), then postprocesses the results. Five Jupyter notebooks cover the pipeline: window the dataset and fit encoders/scaler (1), train the model (2), evaluate it on a held-out split plus optional cross-run generalization checks (3), aggregate and compare metrics across runs (4), and map handover/migration events spatially by type and destination cell (5). A local/interactive orchestrator notebook, run_pipeline.ipynb, chains Steps 1-4 via one set of top-level parameters and runs out of the box against a bundled example data slice; Step 5 is an optional postprocessing step, runnable standalone against the same bundled example or a real preprocessing run. Steps 1-3 are GPU/Slurm workloads intended to run inside a pinned Singularity/Apptainer container (see requirements/train.txt and slurm/*.sbatch) via bare `jupyter execute` -- there is no papermill in the target execution image, so headless parameterization is done by src/fumd_training_workflow/notebook_runner.py, a small nbformat/nbclient-based replacement (see that module's docstring), or by hand-editing each notebook's own tagged parameters cell before Slurm submission. Steps 4-5 are local/no-GPU postprocessing steps. An earlier version of this workflow also included a real-measurement base-station-location-estimation step, refactored from estimacion_antenas.ipynb; it was dropped because no real RSRP measurement data exists in either connected project folder to validate or exercise it against -- see README.md's \"Notes on the source notebooks\" section. See README.md for the full step-by-step description, inputs/outputs, execution environment, and validation status. Unless otherwise indicated, source code is MIT-licensed and explanatory text/figures are CC BY 4.0; input datasets retain the licences stated in their own metadata/source records.",
       "version": "0.1.1",
       "license": [
         "https://spdx.org/licenses/MIT",
@@ -95,10 +95,7 @@
           "@id": "notebooks/step_4_aggregate_training_metrics.ipynb"
         },
         {
-          "@id": "notebooks/step_5_estimate_bs_locations.ipynb"
-        },
-        {
-          "@id": "notebooks/step_6_map_migration_events.ipynb"
+          "@id": "notebooks/step_5_map_migration_events.ipynb"
         },
         {
           "@id": "src/fumd_training_workflow/__init__.py"
@@ -114,9 +111,6 @@
         },
         {
           "@id": "src/fumd_training_workflow/metrics_io.py"
-        },
-        {
-          "@id": "src/fumd_training_workflow/bs_location.py"
         },
         {
           "@id": "src/fumd_training_workflow/migration_map.py"
@@ -217,7 +211,7 @@
         "ComputationalWorkflow"
       ],
       "name": "Local/interactive orchestrator: Steps 1-4 end to end",
-      "description": "Chains Steps 1-4 (load & window -> train -> evaluate -> aggregate metrics) via src/fumd_training_workflow/notebook_runner.py, passing each step's output into the next from one set of top-level parameters, for local/interactive development. Writes every intermediate/final file, plus an executed copy of each step notebook for provenance, under OUTPUT_DIR/executed/. For HPC/Slurm submission, each of Steps 1-3 is instead run standalone via slurm/*.sbatch (see this notebook's markdown cell). Steps 5-6 are not chained here -- they need real measurement/BS data this repository does not bundle.",
+      "description": "Chains Steps 1-4 (load & window -> train -> evaluate -> aggregate metrics) via src/fumd_training_workflow/notebook_runner.py, passing each step's output into the next from one set of top-level parameters, for local/interactive development. Writes every intermediate/final file, plus an executed copy of each step notebook for provenance, under OUTPUT_DIR/executed/. For HPC/Slurm submission, each of Steps 1-3 is instead run standalone via slurm/*.sbatch (see this notebook's markdown cell). Step 5 is not chained here -- it's run standalone, separately from the core GPU chain.",
       "conformsTo": {
         "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
       },
@@ -500,63 +494,15 @@
       ]
     },
     {
-      "@id": "notebooks/step_5_estimate_bs_locations.ipynb",
+      "@id": "notebooks/step_5_map_migration_events.ipynb",
       "@type": [
         "File",
         "SoftwareSourceCode",
         "ComputationalWorkflow"
       ],
-      "name": "Step 5 (optional, bring-your-own-data): Estimate BS locations",
-      "description": "Estimates real base-station site coordinates from measured RSRP data: top-quantile RSRP per cell id, then DBSCAN (haversine metric) clustering into physical sites. Anchors abstract simulation servingCell/destination ids to real-world coordinates for Step 6. No example RSRP dataset is bundled (no real measurement data exists in this repository) -- fails cleanly with a clear error if RSRP_CSV_PATH is unset. Local/no-GPU step; not chained by run_pipeline.ipynb.",
+      "name": "Step 5 (optional): Map migration events",
+      "description": "Matches handover/migration events to vehicle positions by nearest time, groups destinations beyond the top K into 'Otras', and plots events by type and destination cell, optionally overlaid with real BS coordinates (a hand-curated dict, e.g. from your own BS-location analysis or operator/OSM data) and an OSM street-network background. Defaults chain onto this repository's own bundled example slice, so it is runnable out of the box. Local/no-GPU step; not chained by run_pipeline.ipynb.",
       "position": 5,
-      "conformsTo": {
-        "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
-      },
-      "programmingLanguage": {
-        "@id": "#jupyter-notebook"
-      },
-      "encodingFormat": "application/x-ipynb+json",
-      "input": [
-        {
-          "@id": "#param-rsrp-csv-path"
-        },
-        {
-          "@id": "#param-top-quantile"
-        },
-        {
-          "@id": "#param-cluster-eps-meters"
-        },
-        {
-          "@id": "#param-osm-pbf-path"
-        },
-        {
-          "@id": "#param-map-title"
-        },
-        {
-          "@id": "#param-step5-output-dir"
-        }
-      ],
-      "output": [
-        {
-          "@id": "#param-bs-sites"
-        }
-      ],
-      "softwareRequirements": [
-        {
-          "@id": "src/fumd_training_workflow/bs_location.py"
-        }
-      ]
-    },
-    {
-      "@id": "notebooks/step_6_map_migration_events.ipynb",
-      "@type": [
-        "File",
-        "SoftwareSourceCode",
-        "ComputationalWorkflow"
-      ],
-      "name": "Step 6 (optional): Map migration events",
-      "description": "Matches handover/migration events to vehicle positions by nearest time, groups destinations beyond the top K into 'Otras', and plots events by type and destination cell, optionally overlaid with real BS coordinates (e.g. from Step 5) and an OSM street-network background. Defaults chain onto this repository's own bundled example slice, so it is runnable out of the box. Local/no-GPU step; not chained by run_pipeline.ipynb.",
-      "position": 6,
       "conformsTo": {
         "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
       },
@@ -587,7 +533,7 @@
           "@id": "#param-osm-pbf-path"
         },
         {
-          "@id": "#param-step6-output-dir"
+          "@id": "#param-step5-output-dir"
         },
         {
           "@id": "#param-plot-title"
@@ -804,52 +750,11 @@
       "description": "metrics_long.csv, comparison_accuracy_by_output.png, comparison_top2_accuracy_by_output.png, comparison_f1_by_output.png, metrics_summary.csv."
     },
     {
-      "@id": "#param-rsrp-csv-path",
-      "@type": "FormalParameter",
-      "name": "RSRP_CSV_PATH",
-      "description": "Real RSRP measurement CSV (columns: lat, lon/long, cid, tech, rsrp_lte, rsrp_5g). No default -- no example is bundled.",
-      "defaultValue": "null"
-    },
-    {
-      "@id": "#param-top-quantile",
-      "@type": "FormalParameter",
-      "name": "TOP_QUANTILE",
-      "description": "Strongest fraction of each cell's RSRP readings used to estimate its location.",
-      "defaultValue": "0.2"
-    },
-    {
-      "@id": "#param-cluster-eps-meters",
-      "@type": "FormalParameter",
-      "name": "CLUSTER_EPS_METERS",
-      "description": "Distance (meters) within which co-located per-cell-id estimates are merged into one physical site.",
-      "defaultValue": "1.0"
-    },
-    {
       "@id": "#param-osm-pbf-path",
       "@type": "FormalParameter",
       "name": "OSM_PBF_PATH",
       "description": "Optional local .osm.pbf extract (e.g. from Geofabrik) for a street-map plot background. None skips the OSM-dependent plot.",
       "defaultValue": "null"
-    },
-    {
-      "@id": "#param-map-title",
-      "@type": "FormalParameter",
-      "name": "MAP_TITLE",
-      "description": "Title for Step 5's site-location map.",
-      "defaultValue": "Base station locations"
-    },
-    {
-      "@id": "#param-step5-output-dir",
-      "@type": "FormalParameter",
-      "name": "OUTPUT_DIR (Step 5)",
-      "description": "Directory Step 5 writes bs_per_cid.csv, bs_sites.csv, coverage_and_sites.pdf into.",
-      "defaultValue": "bs_locations"
-    },
-    {
-      "@id": "#param-bs-sites",
-      "@type": "FormalParameter",
-      "name": "Step 5 output",
-      "description": "bs_per_cid.csv (per-cell-id location estimate), bs_sites.csv (clustered physical sites), coverage_and_sites.pdf, and sites_on_osm.pdf if OSM_PBF_PATH is set."
     },
     {
       "@id": "#param-positions-csv-path",
@@ -890,27 +795,27 @@
       "@id": "#param-bs-coords",
       "@type": "FormalParameter",
       "name": "BS_COORDS",
-      "description": "Optional {cell_id: (lon, lat)} real coordinates to overlay, e.g. built from Step 5's bs_sites.csv.",
+      "description": "Optional {cell_id: (lon, lat)} real coordinates to overlay -- a hand-curated dict of known site coordinates (e.g. from your own BS-location analysis or operator/OSM data).",
       "defaultValue": "{}"
     },
     {
-      "@id": "#param-step6-output-dir",
+      "@id": "#param-step5-output-dir",
       "@type": "FormalParameter",
-      "name": "OUTPUT_DIR (Step 6)",
-      "description": "Directory Step 6 writes migration_events_by_type.pdf into.",
+      "name": "OUTPUT_DIR (Step 5)",
+      "description": "Directory Step 5 writes migration_events_by_type.pdf into.",
       "defaultValue": "migration_maps"
     },
     {
       "@id": "#param-plot-title",
       "@type": "FormalParameter",
       "name": "PLOT_TITLE",
-      "description": "Title for Step 6's event map.",
+      "description": "Title for Step 5's event map.",
       "defaultValue": "Event locations by type: destination BS"
     },
     {
       "@id": "#param-migration-map",
       "@type": "FormalParameter",
-      "name": "Step 6 output",
+      "name": "Step 5 output",
       "description": "migration_events_by_type.pdf."
     },
     {
@@ -985,18 +890,6 @@
         "@id": "#python"
       },
       "description": "Structured CSV+JSON metrics read/write, run manifest read/write, and long-format aggregation across runs -- replaces the original notebooks' regex-scraping of free-text training logs."
-    },
-    {
-      "@id": "src/fumd_training_workflow/bs_location.py",
-      "@type": [
-        "File",
-        "SoftwareSourceCode"
-      ],
-      "name": "Real base-station site estimation from RSRP measurements",
-      "programmingLanguage": {
-        "@id": "#python"
-      },
-      "description": "Top-quantile RSRP per cell id + DBSCAN (haversine metric) clustering into physical site coordinates, plus coverage and OSM street-map plotting helpers."
     },
     {
       "@id": "src/fumd_training_workflow/migration_map.py",
@@ -1087,7 +980,7 @@
       "@id": "example-data/events_all_example.csv",
       "@type": "File",
       "encodingFormat": "text/csv",
-      "description": "Matching slice of pipeline_run_900_3/events_all_w3.csv for the same 8 vehicles as dataset_labeled_example.csv. Bundled as Step 6's default EVENTS_CSV_PATH."
+      "description": "Matching slice of pipeline_run_900_3/events_all_w3.csv for the same 8 vehicles as dataset_labeled_example.csv. Bundled as Step 5's default EVENTS_CSV_PATH."
     },
     {
       "@id": "#jupyter-notebook",
@@ -1129,7 +1022,7 @@
       "url": {
         "@id": "https://scikit-learn.org/"
       },
-      "description": "Used for feature scaling, label encoding, evaluation metrics (precision/recall/F1/top-k accuracy/confusion matrix), and DBSCAN base-station clustering."
+      "description": "Used for feature scaling, label encoding, and evaluation metrics (precision/recall/F1/top-k accuracy/confusion matrix)."
     },
     {
       "@id": "#slurm",

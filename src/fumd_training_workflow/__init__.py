@@ -10,7 +10,6 @@ and provides:
   - model.py           the BiLSTM + Bahdanau-attention forecasting model
   - evaluate.py         metrics computation (loss/accuracy/precision/recall/F1/top-2/confusion matrix)
   - metrics_io.py       structured (CSV/JSON) metrics read/write for postprocessing
-  - bs_location.py      real-measurement base-station location estimation
   - migration_map.py    spatial plotting of migration/handover events
 
 Author(s):

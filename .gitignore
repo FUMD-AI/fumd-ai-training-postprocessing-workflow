@@ -18,7 +18,6 @@ env/
 # is user-configurable (e.g. a separate directory per dataset/hyperparameter
 # variant), so this is wildcarded rather than a single fixed name.
 pipeline_run*/
-bs_locations*/
 migration_maps*/
 metrics_comparison*/
 executed/
@@ -33,10 +32,9 @@ logs/
 *.error
 
 # Bring-your-own data this workflow deliberately doesn't bundle (see
-# step_5/step_6's own parameters cells) -- ignored so a real run's large
-# real-measurement/OSM files never get committed by accident.
+# the map-migration-events step's own OSM_PBF_PATH parameter) -- ignored so
+# a real run's large OSM extract never gets committed by accident.
 *.osm.pbf
-data_cellular*.csv
 
 # Editor
 .vscode/
