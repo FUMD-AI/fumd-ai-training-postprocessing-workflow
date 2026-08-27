@@ -306,7 +306,19 @@ renumbered the migration-event-mapping step from Step 6 to Step 5 -- see
 Step 5 too (controlled by its own `EVENTS_CSV_PATH` parameter, skipped if
 unset) so a full local test run -- including the migration-event map --
 is one `jupyter execute run_pipeline.ipynb` call instead of five separate
-ones.
+ones. That chaining surfaced two more real bugs, both fixed: (1)
+`plot_events_by_type`'s x-axis tick labels overlapped for real-world
+lon/lat coordinates (many decimal digits in a narrow, `axis("equal")`
+-shrunk subplot) -- fixed by capping the tick count and rotating labels
+45deg; (2) `notebook_runner.run_step` didn't isolate each chained child
+notebook's environment, so an ambient env var set for
+`run_pipeline.ipynb`'s own top-level parameter (e.g. `OUTPUT_DIR`) leaked
+into every child step's own same-named `env_override` call and silently
+overrode the step-specific value `run_pipeline.ipynb` had just computed
+for it (Step 5's migration maps landed directly in `OUTPUT_DIR/` instead
+of `OUTPUT_DIR/migration_maps/`) -- fixed by temporarily unsetting exactly
+the names each `run_step` call injects, for the duration of that child's
+execution.
 
 **v0.1.0** initial release: rebuilds the five exploratory notebooks listed
 above as this parameterized pipeline. See "Notes on the source notebooks"

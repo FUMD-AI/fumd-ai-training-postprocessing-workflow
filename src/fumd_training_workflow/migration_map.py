@@ -172,6 +172,15 @@ def plot_events_by_type(
                 ax.scatter(lon, lat, s=40, marker="o", color=color, zorder=11)
         ax.set_title(case); ax.set_xlabel("X"); ax.set_ylabel("Y")
         ax.axis("equal")
+        # `axis("equal")` shrinks each subplot's plotted box to match the
+        # data's aspect ratio, which narrows the space available for x tick
+        # labels -- cap the tick count and rotate so long coordinate values
+        # (e.g. SUMO meters, "123456.78") don't overlap each other.
+        ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=6))
+        ax.tick_params(axis="x", labelrotation=45, labelsize=8)
+        ax.tick_params(axis="y", labelsize=8)
+        for label in ax.get_xticklabels():
+            label.set_horizontalalignment("right")
         h, l = ax.get_legend_handles_labels()
         by_label = dict(zip(l, h))
         ax.legend(by_label.values(), by_label.keys(), loc="upper right", fontsize=8, frameon=True)

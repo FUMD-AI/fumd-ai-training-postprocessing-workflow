@@ -94,6 +94,12 @@ def run_step(
     every step notebook resolves paths like `src/`, `example-data/`, and
     its `OUTPUT_DIR` relative to the repository root -- matching how the
     preprocessing workflow's notebooks are documented to be run.
+
+    Any name in `parameters` is also temporarily unset from `os.environ`
+    for the duration of the child kernel's execution, so an ambient
+    same-named environment variable (e.g. one set for the calling
+    notebook's own `env_override` call) can't silently override the value
+    just injected into the child's parameters cell.
     """
     import nbformat
     from nbclient import NotebookClient
@@ -109,8 +115,30 @@ def run_step(
     # kernel startup, which is not a reliable place to depend on), while
     # resources['metadata']['path'] is nbclient's own supported mechanism.
     resources = {"metadata": {"path": cwd or os.getcwd()}}
-    client = NotebookClient(nb, kernel_name=kernel_name, timeout=timeout, resources=resources)
-    client.execute()
+
+    # Every child kernel this starts inherits this *process's* environment
+    # (jupyter_client's KernelManager passes os.environ through by default).
+    # When run_pipeline.ipynb is itself invoked with env-var overrides (see
+    # env_override's docstring below), those same-named ambient variables
+    # would otherwise leak into this child notebook's own env-override cell
+    # and silently re-override the value just injected above -- e.g.
+    # run_pipeline.ipynb computing a step-specific OUTPUT_DIR (Step 5's
+    # migration maps go into OUTPUT_DIR/migration_maps, not OUTPUT_DIR
+    # itself) would get stomped back to the ambient top-level value.
+    # Temporarily unset exactly the names this call is injecting, so the
+    # freshly-injected literal is the only source of truth for the child
+    # kernel; restored immediately after so nothing else in this process
+    # (later steps, run_pipeline.ipynb's own remaining cells) is affected.
+    saved_env = {}
+    if parameters:
+        for name in parameters:
+            if name in os.environ:
+                saved_env[name] = os.environ.pop(name)
+    try:
+        client = NotebookClient(nb, kernel_name=kernel_name, timeout=timeout, resources=resources)
+        client.execute()
+    finally:
+        os.environ.update(saved_env)
 
     out_dir = os.path.dirname(output_path)
     if out_dir:
