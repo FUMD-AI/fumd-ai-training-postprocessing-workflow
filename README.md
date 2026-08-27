@@ -129,6 +129,7 @@ notes above.
 ├── run_pipeline.ipynb            local/interactive orchestrator: runs Steps 1-4 in one call
 ├── LICENSE.txt                  MIT (source code)
 ├── LICENSE-CC-BY-4.0.txt        CC BY 4.0 (explanatory text/figures)
+├── ro-crate-metadata.json       FAIR/WorkflowHub packaging metadata
 ├── requirements/
 │   ├── train.txt                Steps 1-4 (pinned to the .sif image)
 │   └── postprocess.txt           Steps 5-6 (local, unpinned)
@@ -275,6 +276,23 @@ Project with Grant Number 25-EOSC-GRV-INTER-013.
 
 ## Citation
 
-Please cite this workflow if you use it. See `CITATION.cff` for structured
-citation/author metadata -- a DOI slot is reserved, to be filled in once the
-workflow is registered on WorkflowHub.
+Please cite this workflow if you use it. See `CITATION.cff` and
+`ro-crate-metadata.json` for structured citation/author metadata -- a DOI
+slot is reserved in both, to be filled in once the workflow is registered
+on WorkflowHub.
+
+## FAIR / WorkflowHub packaging
+
+`ro-crate-metadata.json` describes this repository as a
+[Workflow RO-Crate](https://w3id.org/workflowhub/workflow-ro-crate/1.0)
+(RO-Crate 1.1 + the WorkflowHub workflow profile), the packaging format
+WorkflowHub registration expects: `run_pipeline.ipynb` is the crate's main
+workflow entity (chaining Steps 1-4), Steps 5-6 are separately described as
+their own optional workflow entities, and every notebook parameter is
+recorded as a `FormalParameter` with its description and default value, so
+the crate stays consistent with each notebook's own `parameters` cell. It
+also records authorship/ORCIDs, the FUMD-AI funding grant, licensing, and
+the pinned software stack (TensorFlow, scikit-learn, Slurm, Singularity)
+this workflow depends on. Regenerate or hand-edit it if the notebooks'
+parameters or pipeline structure change -- nothing currently does this
+automatically.

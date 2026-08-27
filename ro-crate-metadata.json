@@ -1,0 +1,1153 @@
+{
+  "@context": "https://w3id.org/ro/crate/1.1/context",
+  "@graph": [
+    {
+      "@id": "ro-crate-metadata.json",
+      "@type": "CreativeWork",
+      "about": {
+        "@id": "./"
+      },
+      "conformsTo": [
+        {
+          "@id": "https://w3id.org/ro/crate/1.1"
+        },
+        {
+          "@id": "https://w3id.org/workflowhub/workflow-ro-crate/1.0"
+        }
+      ]
+    },
+    {
+      "@id": "./",
+      "@type": "Dataset",
+      "name": "FUMD-AI Training & Postprocessing Workflow",
+      "description": "Trains and evaluates a BiLSTM + Bahdanau-attention model that forecasts a vehicle's serving cell 1-7 seconds ahead from the FUMD-AI preprocessing workflow's AI-ready labeled dataset (dataset_labeled_w<W>.csv), then postprocesses the results. Six Jupyter notebooks cover the pipeline: window the dataset and fit encoders/scaler (1), train the model (2), evaluate it on a held-out split plus optional cross-run generalization checks (3), aggregate and compare metrics across runs (4), estimate real base-station site coordinates from measured RSRP data (5, bring-your-own-data), and map handover/migration events spatially by type and destination cell (6). A local/interactive orchestrator notebook, run_pipeline.ipynb, chains Steps 1-4 via one set of top-level parameters and runs out of the box against a bundled example data slice; Steps 5-6 are optional, bring-your-own-data postprocessing steps run standalone. Steps 1-3 are GPU/Slurm workloads intended to run inside a pinned Singularity/Apptainer container (see requirements/train.txt and slurm/*.sbatch) via bare `jupyter execute` -- there is no papermill in the target execution image, so headless parameterization is done by src/fumd_training_workflow/notebook_runner.py, a small nbformat/nbclient-based replacement (see that module's docstring), or by hand-editing each notebook's own tagged parameters cell before Slurm submission. Steps 4-6 are local/no-GPU postprocessing steps. See README.md for the full step-by-step description, inputs/outputs, execution environment, and validation status. Unless otherwise indicated, source code is MIT-licensed and explanatory text/figures are CC BY 4.0; input datasets retain the licences stated in their own metadata/source records.",
+      "version": "0.1.0",
+      "license": [
+        "https://spdx.org/licenses/MIT",
+        "https://creativecommons.org/licenses/by/4.0/"
+      ],
+      "author": [
+        {
+          "@id": "#cristina-bernad"
+        },
+        {
+          "@id": "#sonja-filiposka"
+        },
+        {
+          "@id": "#katja-gilly"
+        }
+      ],
+      "funding": [
+        {
+          "@id": "#fumdai-grant"
+        }
+      ],
+      "isBasedOn": {
+        "@id": "https://github.com/FUMD-AI/fumd-ai-preprocessing-workflow"
+      },
+      "softwareRequirements": [
+        {
+          "@id": "#python"
+        },
+        {
+          "@id": "#tensorflow"
+        },
+        {
+          "@id": "#scikit-learn"
+        },
+        {
+          "@id": "#slurm"
+        },
+        {
+          "@id": "#singularity"
+        }
+      ],
+      "keywords": [
+        "SUMO",
+        "OMNeT++",
+        "vehicular networks",
+        "cellular handover",
+        "mobility prediction",
+        "LSTM",
+        "attention mechanism",
+        "5G",
+        "V2X",
+        "Slurm",
+        "GPU"
+      ],
+      "mainEntity": {
+        "@id": "run_pipeline.ipynb"
+      },
+      "hasPart": [
+        {
+          "@id": "run_pipeline.ipynb"
+        },
+        {
+          "@id": "notebooks/step_1_load_and_window_dataset.ipynb"
+        },
+        {
+          "@id": "notebooks/step_2_train_model.ipynb"
+        },
+        {
+          "@id": "notebooks/step_3_evaluate_model.ipynb"
+        },
+        {
+          "@id": "notebooks/step_4_aggregate_training_metrics.ipynb"
+        },
+        {
+          "@id": "notebooks/step_5_estimate_bs_locations.ipynb"
+        },
+        {
+          "@id": "notebooks/step_6_map_migration_events.ipynb"
+        },
+        {
+          "@id": "src/fumd_training_workflow/__init__.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/data.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/model.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/evaluate.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/metrics_io.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/bs_location.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/migration_map.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/notebook_runner.py"
+        },
+        {
+          "@id": "slurm/train_model.sbatch"
+        },
+        {
+          "@id": "slurm/evaluate_model.sbatch"
+        },
+        {
+          "@id": "README.md"
+        },
+        {
+          "@id": "CITATION.cff"
+        },
+        {
+          "@id": "LICENSE.txt"
+        },
+        {
+          "@id": "LICENSE-CC-BY-4.0.txt"
+        },
+        {
+          "@id": "requirements/train.txt"
+        },
+        {
+          "@id": "requirements/postprocess.txt"
+        },
+        {
+          "@id": "example-data/dataset_labeled_example.csv"
+        },
+        {
+          "@id": "example-data/events_all_example.csv"
+        }
+      ]
+    },
+    {
+      "@id": "#cristina-bernad",
+      "@type": "Person",
+      "name": "Cristina Bernad",
+      "identifier": "https://orcid.org/0000-0001-9537-415X",
+      "affiliation": {
+        "@id": "#umh"
+      }
+    },
+    {
+      "@id": "#sonja-filiposka",
+      "@type": "Person",
+      "name": "Sonja Filiposka",
+      "email": "sonja.filiposka@finki.ukim.mk",
+      "identifier": "https://orcid.org/0000-0003-0034-2855",
+      "affiliation": {
+        "@id": "#ukim"
+      }
+    },
+    {
+      "@id": "#katja-gilly",
+      "@type": "Person",
+      "name": "Katja Gilly",
+      "identifier": "https://orcid.org/0000-0002-8985-0639",
+      "affiliation": {
+        "@id": "#umh"
+      }
+    },
+    {
+      "@id": "#ukim",
+      "@type": "Organization",
+      "name": "Ss. Cyril and Methodius University in Skopje"
+    },
+    {
+      "@id": "#umh",
+      "@type": "Organization",
+      "name": "Miguel Hernandez University"
+    },
+    {
+      "@id": "#fumdai-grant",
+      "@type": "Grant",
+      "name": "FUMD-AI",
+      "identifier": "25-EOSC-GRV-INTER-013",
+      "description": "This work has been funded by the FUMD-AI project, an EOSC GRAVITY - Inter Project with Grant Number 25-EOSC-GRV-INTER-013.",
+      "funder": {
+        "@id": "#eosc-gravity"
+      }
+    },
+    {
+      "@id": "#eosc-gravity",
+      "@type": "Organization",
+      "name": "EOSC GRAVITY"
+    },
+    {
+      "@id": "run_pipeline.ipynb",
+      "@type": [
+        "File",
+        "SoftwareSourceCode",
+        "ComputationalWorkflow"
+      ],
+      "name": "Local/interactive orchestrator: Steps 1-4 end to end",
+      "description": "Chains Steps 1-4 (load & window -> train -> evaluate -> aggregate metrics) via src/fumd_training_workflow/notebook_runner.py, passing each step's output into the next from one set of top-level parameters, for local/interactive development. Writes every intermediate/final file, plus an executed copy of each step notebook for provenance, under OUTPUT_DIR/executed/. For HPC/Slurm submission, each of Steps 1-3 is instead run standalone via slurm/*.sbatch (see this notebook's markdown cell). Steps 5-6 are not chained here -- they need real measurement/BS data this repository does not bundle.",
+      "conformsTo": {
+        "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
+      },
+      "programmingLanguage": {
+        "@id": "#jupyter-notebook"
+      },
+      "encodingFormat": "application/x-ipynb+json",
+      "input": [
+        {
+          "@id": "#param-dataset-path"
+        },
+        {
+          "@id": "#param-rp-output-dir"
+        },
+        {
+          "@id": "#param-notebooks-dir"
+        },
+        {
+          "@id": "#param-sequence-length"
+        },
+        {
+          "@id": "#param-future-steps"
+        },
+        {
+          "@id": "#param-val-fraction"
+        },
+        {
+          "@id": "#param-random-seed"
+        },
+        {
+          "@id": "#param-epochs"
+        },
+        {
+          "@id": "#param-batch-size"
+        },
+        {
+          "@id": "#param-early-stopping-patience"
+        },
+        {
+          "@id": "#param-cross-run-dataset-paths"
+        }
+      ],
+      "output": [
+        {
+          "@id": "#param-trained-model"
+        },
+        {
+          "@id": "#param-step3-metrics"
+        },
+        {
+          "@id": "#param-step4-comparison"
+        }
+      ],
+      "hasPart": [
+        {
+          "@id": "notebooks/step_1_load_and_window_dataset.ipynb"
+        },
+        {
+          "@id": "notebooks/step_2_train_model.ipynb"
+        },
+        {
+          "@id": "notebooks/step_3_evaluate_model.ipynb"
+        },
+        {
+          "@id": "notebooks/step_4_aggregate_training_metrics.ipynb"
+        }
+      ]
+    },
+    {
+      "@id": "notebooks/step_1_load_and_window_dataset.ipynb",
+      "@type": [
+        "File",
+        "SoftwareSourceCode",
+        "ComputationalWorkflow"
+      ],
+      "name": "Step 1: Load & window dataset",
+      "description": "Loads a dataset_labeled_w<W>.csv, guards/normalizes to one row per vehicle per second, fits label encoders for categorical columns (with a reserved 'unknown' code for values not seen at fit time), splits by whole vehicle into train/val (avoids sliding-window leakage across the split), builds sliding-window sequences excluding lead/leakage columns, and fits the feature scaler on the training split only (reused transform-only everywhere else). Runs on a GPU/Slurm node in the pinned container image (see requirements/train.txt).",
+      "position": 1,
+      "conformsTo": {
+        "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
+      },
+      "programmingLanguage": {
+        "@id": "#jupyter-notebook"
+      },
+      "encodingFormat": "application/x-ipynb+json",
+      "input": [
+        {
+          "@id": "#param-dataset-path"
+        },
+        {
+          "@id": "#param-feature-columns"
+        },
+        {
+          "@id": "#param-sequence-length"
+        },
+        {
+          "@id": "#param-future-steps"
+        },
+        {
+          "@id": "#param-val-fraction"
+        },
+        {
+          "@id": "#param-random-seed"
+        },
+        {
+          "@id": "#param-step1-output-dir"
+        }
+      ],
+      "output": [
+        {
+          "@id": "#param-windowed-run-dir"
+        }
+      ],
+      "softwareRequirements": [
+        {
+          "@id": "src/fumd_training_workflow/data.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/evaluate.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/metrics_io.py"
+        }
+      ]
+    },
+    {
+      "@id": "notebooks/step_2_train_model.ipynb",
+      "@type": [
+        "File",
+        "SoftwareSourceCode",
+        "ComputationalWorkflow"
+      ],
+      "name": "Step 2: Train model",
+      "description": "Builds the 2x bidirectional-LSTM encoder + per-forecast-step Bahdanau additive-attention autoregressive decoder (7 softmax heads, one per second-ahead forecast) and trains it on Step 1's windowed arrays with early stopping. Saves the trained model, training history, updated run manifest, and a training-curves plot. GPU/Slurm step; requires TensorFlow 2.14.0 (see requirements/train.txt).",
+      "position": 2,
+      "conformsTo": {
+        "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
+      },
+      "programmingLanguage": {
+        "@id": "#jupyter-notebook"
+      },
+      "encodingFormat": "application/x-ipynb+json",
+      "input": [
+        {
+          "@id": "#param-input-dir"
+        },
+        {
+          "@id": "#param-step2-output-dir"
+        },
+        {
+          "@id": "#param-lstm-units"
+        },
+        {
+          "@id": "#param-attention-units"
+        },
+        {
+          "@id": "#param-embedding-dim"
+        },
+        {
+          "@id": "#param-dense-units"
+        },
+        {
+          "@id": "#param-dropout-rate"
+        },
+        {
+          "@id": "#param-learning-rate"
+        },
+        {
+          "@id": "#param-epochs"
+        },
+        {
+          "@id": "#param-batch-size"
+        },
+        {
+          "@id": "#param-validation-split"
+        },
+        {
+          "@id": "#param-early-stopping-patience"
+        },
+        {
+          "@id": "#param-random-seed"
+        }
+      ],
+      "output": [
+        {
+          "@id": "#param-trained-model"
+        }
+      ],
+      "softwareRequirements": [
+        {
+          "@id": "src/fumd_training_workflow/model.py"
+        }
+      ]
+    },
+    {
+      "@id": "notebooks/step_3_evaluate_model.ipynb",
+      "@type": [
+        "File",
+        "SoftwareSourceCode",
+        "ComputationalWorkflow"
+      ],
+      "name": "Step 3: Evaluate model",
+      "description": "Evaluates a trained run on its own held-out validation split (per-output precision/recall/F1/top-2 accuracy/confusion matrix, plus an accuracy breakdown for migration-warning-window rows vs steady-state rows), then optionally loops over other dataset_labeled_w<W>.csv paths for a cross-run generalization check, reusing the fitted encoders/scaler transform-only. Writes structured CSV+JSON metrics. GPU/Slurm step (model.predict benefits from a GPU, though nothing is trained here).",
+      "position": 3,
+      "conformsTo": {
+        "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
+      },
+      "programmingLanguage": {
+        "@id": "#jupyter-notebook"
+      },
+      "encodingFormat": "application/x-ipynb+json",
+      "input": [
+        {
+          "@id": "#param-run-dir"
+        },
+        {
+          "@id": "#param-metrics-output-dir"
+        },
+        {
+          "@id": "#param-cross-run-dataset-paths"
+        }
+      ],
+      "output": [
+        {
+          "@id": "#param-step3-metrics"
+        }
+      ],
+      "softwareRequirements": [
+        {
+          "@id": "src/fumd_training_workflow/evaluate.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/metrics_io.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/model.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/data.py"
+        }
+      ]
+    },
+    {
+      "@id": "notebooks/step_4_aggregate_training_metrics.ipynb",
+      "@type": [
+        "File",
+        "SoftwareSourceCode",
+        "ComputationalWorkflow"
+      ],
+      "name": "Step 4: Aggregate training metrics",
+      "description": "Reads structured Step 3 metrics from one or more run directories (e.g. different hyperparameters or architecture variants), concatenates them into a long-format table, and produces per-output-step comparison plots (accuracy, top-2 accuracy, F1) and a summary table -- from structured data, not regex-scraped logs. Local/no-GPU step.",
+      "position": 4,
+      "conformsTo": {
+        "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
+      },
+      "programmingLanguage": {
+        "@id": "#jupyter-notebook"
+      },
+      "encodingFormat": "application/x-ipynb+json",
+      "input": [
+        {
+          "@id": "#param-run-dirs"
+        },
+        {
+          "@id": "#param-variant-labels"
+        },
+        {
+          "@id": "#param-comparison-output-dir"
+        }
+      ],
+      "output": [
+        {
+          "@id": "#param-step4-comparison"
+        }
+      ],
+      "softwareRequirements": [
+        {
+          "@id": "src/fumd_training_workflow/metrics_io.py"
+        }
+      ]
+    },
+    {
+      "@id": "notebooks/step_5_estimate_bs_locations.ipynb",
+      "@type": [
+        "File",
+        "SoftwareSourceCode",
+        "ComputationalWorkflow"
+      ],
+      "name": "Step 5 (optional, bring-your-own-data): Estimate BS locations",
+      "description": "Estimates real base-station site coordinates from measured RSRP data: top-quantile RSRP per cell id, then DBSCAN (haversine metric) clustering into physical sites. Anchors abstract simulation servingCell/destination ids to real-world coordinates for Step 6. No example RSRP dataset is bundled (no real measurement data exists in this repository) -- fails cleanly with a clear error if RSRP_CSV_PATH is unset. Local/no-GPU step; not chained by run_pipeline.ipynb.",
+      "position": 5,
+      "conformsTo": {
+        "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
+      },
+      "programmingLanguage": {
+        "@id": "#jupyter-notebook"
+      },
+      "encodingFormat": "application/x-ipynb+json",
+      "input": [
+        {
+          "@id": "#param-rsrp-csv-path"
+        },
+        {
+          "@id": "#param-top-quantile"
+        },
+        {
+          "@id": "#param-cluster-eps-meters"
+        },
+        {
+          "@id": "#param-osm-pbf-path"
+        },
+        {
+          "@id": "#param-map-title"
+        },
+        {
+          "@id": "#param-step5-output-dir"
+        }
+      ],
+      "output": [
+        {
+          "@id": "#param-bs-sites"
+        }
+      ],
+      "softwareRequirements": [
+        {
+          "@id": "src/fumd_training_workflow/bs_location.py"
+        }
+      ]
+    },
+    {
+      "@id": "notebooks/step_6_map_migration_events.ipynb",
+      "@type": [
+        "File",
+        "SoftwareSourceCode",
+        "ComputationalWorkflow"
+      ],
+      "name": "Step 6 (optional): Map migration events",
+      "description": "Matches handover/migration events to vehicle positions by nearest time, groups destinations beyond the top K into 'Otras', and plots events by type and destination cell, optionally overlaid with real BS coordinates (e.g. from Step 5) and an OSM street-network background. Defaults chain onto this repository's own bundled example slice, so it is runnable out of the box. Local/no-GPU step; not chained by run_pipeline.ipynb.",
+      "position": 6,
+      "conformsTo": {
+        "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
+      },
+      "programmingLanguage": {
+        "@id": "#jupyter-notebook"
+      },
+      "encodingFormat": "application/x-ipynb+json",
+      "input": [
+        {
+          "@id": "#param-positions-csv-path"
+        },
+        {
+          "@id": "#param-events-csv-path"
+        },
+        {
+          "@id": "#param-match-tolerance-s"
+        },
+        {
+          "@id": "#param-exclude-cases"
+        },
+        {
+          "@id": "#param-top-k-destinations"
+        },
+        {
+          "@id": "#param-bs-coords"
+        },
+        {
+          "@id": "#param-osm-pbf-path"
+        },
+        {
+          "@id": "#param-step6-output-dir"
+        },
+        {
+          "@id": "#param-plot-title"
+        }
+      ],
+      "output": [
+        {
+          "@id": "#param-migration-map"
+        }
+      ],
+      "softwareRequirements": [
+        {
+          "@id": "src/fumd_training_workflow/migration_map.py"
+        }
+      ]
+    },
+    {
+      "@id": "#param-dataset-path",
+      "@type": "FormalParameter",
+      "name": "DATASET_PATH",
+      "description": "A dataset_labeled_w<W>.csv from the FUMD-AI preprocessing workflow (or the bundled example slice).",
+      "defaultValue": "example-data/dataset_labeled_example.csv"
+    },
+    {
+      "@id": "#param-feature-columns",
+      "@type": "FormalParameter",
+      "name": "FEATURE_COLUMNS",
+      "description": "Feature columns to use, or None for data.DEFAULT_FEATURE_COLUMNS (everything except lead/leakage and label-only columns).",
+      "defaultValue": "null"
+    },
+    {
+      "@id": "#param-sequence-length",
+      "@type": "FormalParameter",
+      "name": "SEQUENCE_LENGTH",
+      "description": "Seconds of history per input window.",
+      "defaultValue": "6"
+    },
+    {
+      "@id": "#param-future-steps",
+      "@type": "FormalParameter",
+      "name": "FUTURE_STEPS",
+      "description": "Seconds ahead to forecast (one softmax output head per value).",
+      "defaultValue": "[1, 2, 3, 4, 5, 6, 7]"
+    },
+    {
+      "@id": "#param-val-fraction",
+      "@type": "FormalParameter",
+      "name": "VAL_FRACTION",
+      "description": "Fraction of whole vehicles (not windows) held out for validation.",
+      "defaultValue": "0.2"
+    },
+    {
+      "@id": "#param-random-seed",
+      "@type": "FormalParameter",
+      "name": "RANDOM_SEED",
+      "description": "Seed for the train/val vehicle split and model weight initialization.",
+      "defaultValue": "42"
+    },
+    {
+      "@id": "#param-step1-output-dir",
+      "@type": "FormalParameter",
+      "name": "OUTPUT_DIR (Step 1)",
+      "description": "Directory Step 1 writes windows.npz, scaler.joblib, label_encoders.joblib, run_manifest.json into.",
+      "defaultValue": "pipeline_run"
+    },
+    {
+      "@id": "#param-windowed-run-dir",
+      "@type": "FormalParameter",
+      "name": "Step 1 run directory contents",
+      "description": "windows.npz (train/val sequence arrays), scaler.joblib, label_encoders.joblib, run_manifest.json."
+    },
+    {
+      "@id": "#param-input-dir",
+      "@type": "FormalParameter",
+      "name": "INPUT_DIR (Step 2)",
+      "description": "Step 1's output directory (reads windows.npz and run_manifest.json).",
+      "defaultValue": "pipeline_run"
+    },
+    {
+      "@id": "#param-step2-output-dir",
+      "@type": "FormalParameter",
+      "name": "OUTPUT_DIR (Step 2)",
+      "description": "Directory Step 2 writes model.keras, training_history.json, training_curves.png, and the updated run_manifest.json into.",
+      "defaultValue": "pipeline_run"
+    },
+    {
+      "@id": "#param-lstm-units",
+      "@type": "FormalParameter",
+      "name": "LSTM_UNITS",
+      "description": "Hidden units per BiLSTM encoder layer.",
+      "defaultValue": "128"
+    },
+    {
+      "@id": "#param-attention-units",
+      "@type": "FormalParameter",
+      "name": "ATTENTION_UNITS",
+      "description": "Hidden units in the Bahdanau attention scoring network.",
+      "defaultValue": "128"
+    },
+    {
+      "@id": "#param-embedding-dim",
+      "@type": "FormalParameter",
+      "name": "EMBEDDING_DIM",
+      "description": "Dimensionality of the decoder's autoregressive token embedding.",
+      "defaultValue": "128"
+    },
+    {
+      "@id": "#param-dense-units",
+      "@type": "FormalParameter",
+      "name": "DENSE_UNITS",
+      "description": "Hidden units in each per-step decoder dense layer.",
+      "defaultValue": "128"
+    },
+    {
+      "@id": "#param-dropout-rate",
+      "@type": "FormalParameter",
+      "name": "DROPOUT_RATE",
+      "description": "Dropout rate applied after the encoder and in each decoder step.",
+      "defaultValue": "0.2"
+    },
+    {
+      "@id": "#param-learning-rate",
+      "@type": "FormalParameter",
+      "name": "LEARNING_RATE",
+      "description": "Adam optimizer learning rate.",
+      "defaultValue": "0.001"
+    },
+    {
+      "@id": "#param-epochs",
+      "@type": "FormalParameter",
+      "name": "EPOCHS",
+      "description": "Maximum training epochs (subject to early stopping).",
+      "defaultValue": "50"
+    },
+    {
+      "@id": "#param-batch-size",
+      "@type": "FormalParameter",
+      "name": "BATCH_SIZE",
+      "description": "Training batch size.",
+      "defaultValue": "64"
+    },
+    {
+      "@id": "#param-validation-split",
+      "@type": "FormalParameter",
+      "name": "VALIDATION_SPLIT",
+      "description": "Fraction of the training windows carved out for early-stopping monitoring only (separate from Step 1's vehicle-level VAL_FRACTION).",
+      "defaultValue": "0.2"
+    },
+    {
+      "@id": "#param-early-stopping-patience",
+      "@type": "FormalParameter",
+      "name": "EARLY_STOPPING_PATIENCE",
+      "description": "Epochs of no val_loss improvement before stopping and restoring the best weights.",
+      "defaultValue": "3"
+    },
+    {
+      "@id": "#param-trained-model",
+      "@type": "FormalParameter",
+      "name": "Step 2 run directory contents",
+      "description": "model.keras, training_history.json, training_curves.png, updated run_manifest.json."
+    },
+    {
+      "@id": "#param-run-dir",
+      "@type": "FormalParameter",
+      "name": "RUN_DIR (Step 3)",
+      "description": "A Step 1+2 output directory to evaluate.",
+      "defaultValue": "pipeline_run"
+    },
+    {
+      "@id": "#param-metrics-output-dir",
+      "@type": "FormalParameter",
+      "name": "METRICS_OUTPUT_DIR (Step 3)",
+      "description": "Where Step 3 writes metrics_<run_label>.csv/json; None means RUN_DIR.",
+      "defaultValue": "null"
+    },
+    {
+      "@id": "#param-cross-run-dataset-paths",
+      "@type": "FormalParameter",
+      "name": "CROSS_RUN_DATASET_PATHS",
+      "description": "Optional list of other dataset_labeled_w<W>.csv paths to additionally evaluate the trained model against, for a cross-run generalization check.",
+      "defaultValue": "[]"
+    },
+    {
+      "@id": "#param-step3-metrics",
+      "@type": "FormalParameter",
+      "name": "Step 3 metrics output",
+      "description": "metrics_<run_label>.csv (flat) and metrics_<run_label>.json (full, including confusion matrices) per evaluated dataset, plus the migration-window accuracy breakdown."
+    },
+    {
+      "@id": "#param-run-dirs",
+      "@type": "FormalParameter",
+      "name": "RUN_DIRS",
+      "description": "One or more Step 2/3 output directories to compare.",
+      "defaultValue": "[\"pipeline_run\"]"
+    },
+    {
+      "@id": "#param-variant-labels",
+      "@type": "FormalParameter",
+      "name": "VARIANT_LABELS",
+      "description": "Labels for each RUN_DIRS entry; None uses each directory's basename.",
+      "defaultValue": "null"
+    },
+    {
+      "@id": "#param-comparison-output-dir",
+      "@type": "FormalParameter",
+      "name": "COMPARISON_OUTPUT_DIR",
+      "description": "Directory Step 4 writes metrics_long.csv, comparison plots, and metrics_summary.csv into.",
+      "defaultValue": "metrics_comparison"
+    },
+    {
+      "@id": "#param-step4-comparison",
+      "@type": "FormalParameter",
+      "name": "Step 4 comparison output",
+      "description": "metrics_long.csv, comparison_accuracy_by_output.png, comparison_top2_accuracy_by_output.png, comparison_f1_by_output.png, metrics_summary.csv."
+    },
+    {
+      "@id": "#param-rsrp-csv-path",
+      "@type": "FormalParameter",
+      "name": "RSRP_CSV_PATH",
+      "description": "Real RSRP measurement CSV (columns: lat, lon/long, cid, tech, rsrp_lte, rsrp_5g). No default -- no example is bundled.",
+      "defaultValue": "null"
+    },
+    {
+      "@id": "#param-top-quantile",
+      "@type": "FormalParameter",
+      "name": "TOP_QUANTILE",
+      "description": "Strongest fraction of each cell's RSRP readings used to estimate its location.",
+      "defaultValue": "0.2"
+    },
+    {
+      "@id": "#param-cluster-eps-meters",
+      "@type": "FormalParameter",
+      "name": "CLUSTER_EPS_METERS",
+      "description": "Distance (meters) within which co-located per-cell-id estimates are merged into one physical site.",
+      "defaultValue": "1.0"
+    },
+    {
+      "@id": "#param-osm-pbf-path",
+      "@type": "FormalParameter",
+      "name": "OSM_PBF_PATH",
+      "description": "Optional local .osm.pbf extract (e.g. from Geofabrik) for a street-map plot background. None skips the OSM-dependent plot.",
+      "defaultValue": "null"
+    },
+    {
+      "@id": "#param-map-title",
+      "@type": "FormalParameter",
+      "name": "MAP_TITLE",
+      "description": "Title for Step 5's site-location map.",
+      "defaultValue": "Base station locations"
+    },
+    {
+      "@id": "#param-step5-output-dir",
+      "@type": "FormalParameter",
+      "name": "OUTPUT_DIR (Step 5)",
+      "description": "Directory Step 5 writes bs_per_cid.csv, bs_sites.csv, coverage_and_sites.pdf into.",
+      "defaultValue": "bs_locations"
+    },
+    {
+      "@id": "#param-bs-sites",
+      "@type": "FormalParameter",
+      "name": "Step 5 output",
+      "description": "bs_per_cid.csv (per-cell-id location estimate), bs_sites.csv (clustered physical sites), coverage_and_sites.pdf, and sites_on_osm.pdf if OSM_PBF_PATH is set."
+    },
+    {
+      "@id": "#param-positions-csv-path",
+      "@type": "FormalParameter",
+      "name": "POSITIONS_CSV_PATH",
+      "description": "Vehicle position/dataset CSV (defaults to this repository's bundled example slice).",
+      "defaultValue": "example-data/dataset_labeled_example.csv"
+    },
+    {
+      "@id": "#param-events-csv-path",
+      "@type": "FormalParameter",
+      "name": "EVENTS_CSV_PATH",
+      "description": "Handover/migration events CSV, e.g. preprocessing's events_all_w<W>.csv (defaults to the bundled example slice).",
+      "defaultValue": "example-data/events_all_example.csv"
+    },
+    {
+      "@id": "#param-match-tolerance-s",
+      "@type": "FormalParameter",
+      "name": "MATCH_TOLERANCE_S",
+      "description": "Maximum time gap allowed between an event and the position sample matched to it.",
+      "defaultValue": "0.05"
+    },
+    {
+      "@id": "#param-exclude-cases",
+      "@type": "FormalParameter",
+      "name": "EXCLUDE_CASES",
+      "description": "Diagnostic-only event case labels dropped before plotting.",
+      "defaultValue": "[\"C4_no_estable\"]"
+    },
+    {
+      "@id": "#param-top-k-destinations",
+      "@type": "FormalParameter",
+      "name": "TOP_K_DESTINATIONS",
+      "description": "Destinations beyond the top K (by event count) are grouped into an 'Otras' bucket.",
+      "defaultValue": "9"
+    },
+    {
+      "@id": "#param-bs-coords",
+      "@type": "FormalParameter",
+      "name": "BS_COORDS",
+      "description": "Optional {cell_id: (lon, lat)} real coordinates to overlay, e.g. built from Step 5's bs_sites.csv.",
+      "defaultValue": "{}"
+    },
+    {
+      "@id": "#param-step6-output-dir",
+      "@type": "FormalParameter",
+      "name": "OUTPUT_DIR (Step 6)",
+      "description": "Directory Step 6 writes migration_events_by_type.pdf into.",
+      "defaultValue": "migration_maps"
+    },
+    {
+      "@id": "#param-plot-title",
+      "@type": "FormalParameter",
+      "name": "PLOT_TITLE",
+      "description": "Title for Step 6's event map.",
+      "defaultValue": "Event locations by type: destination BS"
+    },
+    {
+      "@id": "#param-migration-map",
+      "@type": "FormalParameter",
+      "name": "Step 6 output",
+      "description": "migration_events_by_type.pdf."
+    },
+    {
+      "@id": "#param-rp-output-dir",
+      "@type": "FormalParameter",
+      "name": "OUTPUT_DIR (run_pipeline.ipynb)",
+      "description": "Directory the chained Steps 1-4 write into (passed through as each step's own OUTPUT_DIR).",
+      "defaultValue": "pipeline_run"
+    },
+    {
+      "@id": "#param-notebooks-dir",
+      "@type": "FormalParameter",
+      "name": "NOTEBOOKS_DIR",
+      "description": "Directory containing the step_1...step_4 notebooks that run_pipeline.ipynb calls via notebook_runner.run_step.",
+      "defaultValue": "notebooks"
+    },
+    {
+      "@id": "src/fumd_training_workflow/__init__.py",
+      "@type": [
+        "File",
+        "SoftwareSourceCode"
+      ],
+      "name": "fumd_training_workflow package init",
+      "programmingLanguage": {
+        "@id": "#python"
+      }
+    },
+    {
+      "@id": "src/fumd_training_workflow/data.py",
+      "@type": [
+        "File",
+        "SoftwareSourceCode"
+      ],
+      "name": "Dataset loading, encoding, vehicle-level splitting, sliding-window sequence construction, scaling",
+      "description": "load_labeled_dataset, ensure_one_row_per_vehicle_second, SafeLabelEncoder/fit_label_encoders/apply_label_encoders, split_vehicles (splits by whole vehicle to avoid sliding-window leakage), build_sequences, fit_scaler/apply_scaler (fit on train only, transform-only elsewhere). Documents the lead/leakage columns (servingCell1..7) and label-only columns (migration, destination) explicitly excluded from model features.",
+      "programmingLanguage": {
+        "@id": "#python"
+      }
+    },
+    {
+      "@id": "src/fumd_training_workflow/model.py",
+      "@type": [
+        "File",
+        "SoftwareSourceCode"
+      ],
+      "name": "BahdanauAttention layer and build_model()",
+      "description": "2x bidirectional-LSTM encoder feeding a per-forecast-step Bahdanau additive-attention autoregressive decoder (7 softmax output heads), with pre-instantiated per-step layers (avoids an in-loop layer-creation weight-sharing bug present in the original notebook).",
+      "programmingLanguage": {
+        "@id": "#python"
+      }
+    },
+    {
+      "@id": "src/fumd_training_workflow/evaluate.py",
+      "@type": [
+        "File",
+        "SoftwareSourceCode"
+      ],
+      "name": "Evaluation metrics",
+      "programmingLanguage": {
+        "@id": "#python"
+      },
+      "description": "infer_num_base_stations (derives class count from the data instead of a hardcoded value), evaluate_per_output (per-step precision/recall/F1/top-2 accuracy/confusion matrix), summarize_overall, evaluate_migration_breakdown (accuracy split by migration-warning-window rows vs steady-state rows)."
+    },
+    {
+      "@id": "src/fumd_training_workflow/metrics_io.py",
+      "@type": [
+        "File",
+        "SoftwareSourceCode"
+      ],
+      "name": "Structured metrics and run-manifest I/O",
+      "programmingLanguage": {
+        "@id": "#python"
+      },
+      "description": "Structured CSV+JSON metrics read/write, run manifest read/write, and long-format aggregation across runs -- replaces the original notebooks' regex-scraping of free-text training logs."
+    },
+    {
+      "@id": "src/fumd_training_workflow/bs_location.py",
+      "@type": [
+        "File",
+        "SoftwareSourceCode"
+      ],
+      "name": "Real base-station site estimation from RSRP measurements",
+      "programmingLanguage": {
+        "@id": "#python"
+      },
+      "description": "Top-quantile RSRP per cell id + DBSCAN (haversine metric) clustering into physical site coordinates, plus coverage and OSM street-map plotting helpers."
+    },
+    {
+      "@id": "src/fumd_training_workflow/migration_map.py",
+      "@type": [
+        "File",
+        "SoftwareSourceCode"
+      ],
+      "name": "Migration-event to position matching and spatial plotting",
+      "programmingLanguage": {
+        "@id": "#python"
+      },
+      "description": "Nearest-time matching of handover events to vehicle positions, top-K destination grouping, and per-event-type spatial plotting, generalized so BS coordinates are always a parameter rather than duplicated per-city notebook constants."
+    },
+    {
+      "@id": "src/fumd_training_workflow/notebook_runner.py",
+      "@type": [
+        "File",
+        "SoftwareSourceCode"
+      ],
+      "name": "Headless notebook parameter injection and execution",
+      "programmingLanguage": {
+        "@id": "#python"
+      },
+      "description": "inject_parameters/run_step: a small nbformat/nbclient-based replacement for papermill, built specifically because this workflow's real execution environment invokes notebooks via bare `jupyter execute` (nbclient's CLI) with no parameter-injection tool available. Used by run_pipeline.ipynb; individual Slurm-submitted steps are parameterized by hand-editing each notebook's own tagged parameters cell instead."
+    },
+    {
+      "@id": "slurm/train_model.sbatch",
+      "@type": "File",
+      "encodingFormat": "text/plain",
+      "description": "Slurm submission script for Step 2 (train_model): requests a GPU node and runs `singularity exec --nv --pwd /workflow ... jupyter execute notebooks/step_2_train_model.ipynb` against the pinned execution image. Edit the notebook's own parameters cell before submitting -- there is no external parameter injection at this layer."
+    },
+    {
+      "@id": "slurm/evaluate_model.sbatch",
+      "@type": "File",
+      "encodingFormat": "text/plain",
+      "description": "Slurm submission script for Step 3 (evaluate_model), same pattern as train_model.sbatch."
+    },
+    {
+      "@id": "README.md",
+      "@type": "File",
+      "about": {
+        "@id": "./"
+      },
+      "encodingFormat": "text/markdown"
+    },
+    {
+      "@id": "CITATION.cff",
+      "@type": "File",
+      "about": {
+        "@id": "./"
+      },
+      "encodingFormat": "text/plain",
+      "description": "Citation File Format (CFF) metadata for citing this workflow, mirroring the authorship/license/version details in this RO-Crate."
+    },
+    {
+      "@id": "LICENSE.txt",
+      "@type": "File",
+      "encodingFormat": "text/plain",
+      "license": "https://spdx.org/licenses/MIT",
+      "description": "MIT License text (applies to source code)."
+    },
+    {
+      "@id": "LICENSE-CC-BY-4.0.txt",
+      "@type": "File",
+      "encodingFormat": "text/plain",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "description": "Creative Commons Attribution 4.0 International License text (applies to explanatory text and original figures)."
+    },
+    {
+      "@id": "requirements/train.txt",
+      "@type": "File",
+      "encodingFormat": "text/plain",
+      "description": "Python dependencies for Steps 1-4, pinned exactly to this project's Slurm/Singularity execution image (image_cuda_jupyter.sif, Python 3.10.9)."
+    },
+    {
+      "@id": "requirements/postprocess.txt",
+      "@type": "File",
+      "encodingFormat": "text/plain",
+      "description": "Unpinned Python dependencies for the local/no-GPU postprocessing steps (5-6)."
+    },
+    {
+      "@id": "example-data/dataset_labeled_example.csv",
+      "@type": "File",
+      "encodingFormat": "text/csv",
+      "description": "Small (1333-row, 8-vehicle) real slice cut from the FUMD-AI preprocessing workflow's own pipeline_run_900_3/dataset_labeled_w3.csv output, chosen to include real migration events -- not synthetic data. Bundled so Steps 1 and 6 (and run_pipeline.ipynb) run out of the box."
+    },
+    {
+      "@id": "example-data/events_all_example.csv",
+      "@type": "File",
+      "encodingFormat": "text/csv",
+      "description": "Matching slice of pipeline_run_900_3/events_all_w3.csv for the same 8 vehicles as dataset_labeled_example.csv. Bundled as Step 6's default EVENTS_CSV_PATH."
+    },
+    {
+      "@id": "#jupyter-notebook",
+      "@type": "ComputerLanguage",
+      "name": "Jupyter Notebook",
+      "identifier": {
+        "@id": "https://jupyter.org/"
+      },
+      "url": {
+        "@id": "https://jupyter.org/"
+      }
+    },
+    {
+      "@id": "#python",
+      "@type": "ComputerLanguage",
+      "name": "Python",
+      "identifier": {
+        "@id": "https://www.python.org/"
+      },
+      "url": {
+        "@id": "https://www.python.org/"
+      }
+    },
+    {
+      "@id": "#tensorflow",
+      "@type": "SoftwareApplication",
+      "name": "TensorFlow",
+      "softwareVersion": "2.14.0",
+      "url": {
+        "@id": "https://www.tensorflow.org/"
+      },
+      "description": "Deep learning framework used to build and train the BiLSTM + Bahdanau-attention model (Steps 2-3). Version pinned to match the target Slurm/Singularity execution image exactly."
+    },
+    {
+      "@id": "#scikit-learn",
+      "@type": "SoftwareApplication",
+      "name": "scikit-learn",
+      "softwareVersion": "1.5.2",
+      "url": {
+        "@id": "https://scikit-learn.org/"
+      },
+      "description": "Used for feature scaling, label encoding, evaluation metrics (precision/recall/F1/top-k accuracy/confusion matrix), and DBSCAN base-station clustering."
+    },
+    {
+      "@id": "#slurm",
+      "@type": "SoftwareApplication",
+      "name": "Slurm",
+      "url": {
+        "@id": "https://slurm.schedmd.com/"
+      },
+      "description": "Workload manager Steps 1-3 are submitted to via the slurm/*.sbatch templates, on a GPU node reachable via `--gres=gpu:1`."
+    },
+    {
+      "@id": "#singularity",
+      "@type": "SoftwareApplication",
+      "name": "Singularity/Apptainer",
+      "url": {
+        "@id": "https://apptainer.org/"
+      },
+      "description": "Container runtime that runs each Slurm-submitted step notebook via `singularity exec ... jupyter execute <notebook>.ipynb` inside the pinned execution image built from requirements/train.txt. No papermill is available in this image; see src/fumd_training_workflow/notebook_runner.py."
+    }
+  ]
+}
