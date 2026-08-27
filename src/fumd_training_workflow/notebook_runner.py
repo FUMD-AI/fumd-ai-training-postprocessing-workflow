@@ -38,9 +38,23 @@ import os
 
 
 def inject_parameters(nb, parameters: dict):
-    """Overwrite the source of the cell tagged `"parameters"` with
-    `name = <python-literal>` assignments. Raises if no such cell exists --
-    every step notebook in this workflow has exactly one.
+    """Append `name = <python-literal>` assignments to the end of the cell
+    tagged `"parameters"`, one per key in `parameters`. Raises if no such
+    cell exists -- every step notebook in this workflow has exactly one.
+
+    Appends rather than replaces the cell's source: a caller (e.g.
+    run_pipeline.ipynb) is only expected to override the subset of
+    parameters it actually cares about propagating between steps -- every
+    *other* parameter must keep resolving to the value the notebook's own
+    parameters cell already assigns it. Replacing the whole cell source
+    with only the given keys would silently undefine every parameter left
+    out of `parameters`, which is exactly the bug this used to have: e.g.
+    run_pipeline.ipynb's call for Step 2 only passes INPUT_DIR, OUTPUT_DIR,
+    EPOCHS, BATCH_SIZE, EARLY_STOPPING_PATIENCE, and RANDOM_SEED --
+    LSTM_UNITS/ATTENTION_UNITS/EMBEDDING_DIM/DENSE_UNITS/DROPOUT_RATE/
+    LEARNING_RATE/VALIDATION_SPLIT are meant to keep the notebook's own
+    defaults. Since cell execution is top-to-bottom, appending re-assigns
+    only the given names, in place, after the originals have already run.
 
     Uses `repr()`, not `json.dumps()`, to render each value: JSON and
     Python literal syntax aren't the same thing -- `json.dumps(None)` is
@@ -54,7 +68,7 @@ def inject_parameters(nb, parameters: dict):
     for cell in nb.cells:
         tags = cell.get("metadata", {}).get("tags", [])
         if cell.get("cell_type") == "code" and "parameters" in tags:
-            lines = ["# --- overwritten by notebook_runner.run_step ---"]
+            lines = [cell["source"], "", "# --- overridden by notebook_runner.run_step ---"]
             lines += [f"{name} = {value!r}" for name, value in parameters.items()]
             cell["source"] = "\n".join(lines)
             return nb
