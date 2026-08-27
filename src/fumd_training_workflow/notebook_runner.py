@@ -39,13 +39,23 @@ import os
 
 def inject_parameters(nb, parameters: dict):
     """Overwrite the source of the cell tagged `"parameters"` with
-    `name = <json-literal>` assignments. Raises if no such cell exists --
-    every step notebook in this workflow has exactly one."""
+    `name = <python-literal>` assignments. Raises if no such cell exists --
+    every step notebook in this workflow has exactly one.
+
+    Uses `repr()`, not `json.dumps()`, to render each value: JSON and
+    Python literal syntax aren't the same thing -- `json.dumps(None)` is
+    the string "null", which is valid JSON but not valid Python (and
+    likewise "true"/"false" vs. Python's True/False), so writing it
+    directly into a code cell as `NAME = null` is a NameError waiting to
+    happen. `repr()` on the plain str/int/float/bool/None/list/dict values
+    these parameters are always built from round-trips correctly as
+    executable Python source.
+    """
     for cell in nb.cells:
         tags = cell.get("metadata", {}).get("tags", [])
         if cell.get("cell_type") == "code" and "parameters" in tags:
             lines = ["# --- overwritten by notebook_runner.run_step ---"]
-            lines += [f"{name} = {json.dumps(value)}" for name, value in parameters.items()]
+            lines += [f"{name} = {value!r}" for name, value in parameters.items()]
             cell["source"] = "\n".join(lines)
             return nb
     raise ValueError("no cell tagged 'parameters' found in this notebook")
