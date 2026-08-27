@@ -65,7 +65,7 @@ stands on its own.
 This project's notebooks run inside a Slurm job, one notebook per job, via:
 
 ```
-singularity exec --nv --pwd /workflow --bind .:/workflow image_cuda_jupyter.sif \
+singularity exec --nv --pwd /workflow --bind .:/workflow image_jupiter_eosc.sif \
     jupyter execute /workflow/notebooks/step_2_train_model.ipynb
 ```
 
@@ -319,6 +319,21 @@ for it (Step 5's migration maps landed directly in `OUTPUT_DIR/` instead
 of `OUTPUT_DIR/migration_maps/`) -- fixed by temporarily unsetting exactly
 the names each `run_step` call injects, for the duration of that child's
 execution.
+
+Also, ahead of a first real Slurm submission: corrected the placeholder
+`.sif` filename in `slurm/*.sbatch`/`requirements/train.txt`/README/
+ro-crate-metadata.json to the real image, `image_jupiter_eosc.sif`, and
+cross-checked its confirmed package list against every import Steps 1-4
+actually make. `joblib` isn't separately listed but ships as a hard
+scikit-learn dependency, so it's fine; `seaborn` (Step 4's comparison
+plots only) genuinely isn't in the image and isn't a dependency of
+anything else there, so `step_4_aggregate_training_metrics.ipynb`'s
+`comparison_plot` is rewritten on plain matplotlib instead (verified
+against both synthetic data and the real `1000_1` run's metrics --
+identical faceted/grouped bar charts, no seaborn import anywhere in
+`requirements/train.txt`'s dependency closure now). Steps 2-3 (the only
+ones that actually run inside the .sif, per `slurm/*.sbatch`) never
+depended on seaborn in the first place.
 
 **v0.1.0** initial release: rebuilds the five exploratory notebooks listed
 above as this parameterized pipeline. See "Notes on the source notebooks"

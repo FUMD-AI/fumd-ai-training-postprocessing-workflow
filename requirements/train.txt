@@ -1,8 +1,13 @@
 # Steps 1-4 (data windowing, training, evaluation, metrics aggregation) --
 # pinned to match this project's Slurm/Singularity execution image
-# (image_cuda_jupyter.sif, Python 3.10.9) exactly, so a local dev
-# environment behaves identically to the GPU cluster it's ultimately run
-# on. Do not loosen these pins without rebuilding/re-validating the .sif.
+# (image_jupiter_eosc.sif, Python 3.10.9), so a local dev environment
+# behaves identically to the GPU cluster it's ultimately run on. Do not
+# loosen these pins without rebuilding/re-validating the .sif. Only Steps
+# 2-3 actually execute inside the .sif (see slurm/*.sbatch); Steps 1 and 4
+# are meant to run locally/on a login node, but are pinned here too so a
+# `pip install -r requirements/train.txt` dev environment matches exactly
+# either way. joblib below isn't separately listed in the .sif's own
+# package manifest but ships as a hard scikit-learn dependency.
 numpy==1.26.4
 pandas==2.2.2
 tensorflow==2.14.0
@@ -27,5 +32,7 @@ tensorflow-estimator==2.14.0
 # step_2_train_model.ipynb's hyperparameters (LSTM_UNITS, DROPOUT_RATE, ...).
 keras-tuner==1.4.7
 
-joblib      # scaler/encoder persistence (step_1) -- a scikit-learn dependency already, listed explicitly since we import it directly
-seaborn     # step_4's comparison plots
+joblib      # scaler/encoder persistence (steps 1-3) -- not separately pinned in
+            # image_jupiter_eosc.sif's own package list, but it's a hard runtime
+            # dependency of scikit-learn (which is listed) and always installs
+            # alongside it -- listed explicitly here since we import it directly.

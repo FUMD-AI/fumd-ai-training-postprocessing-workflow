@@ -20,7 +20,7 @@
 #SBATCH --nodelist=gpgpu01
 
 REPO_DIR=.
-IMAGE=image_cuda_jupyter.sif
+IMAGE=image_jupiter_eosc.sif
 
 # Optional: override this run's parameters (see train_model.sbatch):
 # export RUN_DIR=/absolute/path/on/cluster/pipeline_run

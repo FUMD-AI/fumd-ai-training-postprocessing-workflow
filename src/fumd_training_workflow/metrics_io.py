@@ -113,8 +113,9 @@ def to_long_dataframe(metrics_list: list[dict], variant_label: str | None = None
     Flatten a list of `write_metrics`-style payloads (as loaded by
     `discover_metrics`) into one long-format DataFrame:
     columns = [variant, run_label, future_step, metric, value] -- ready for
-    a `seaborn.barplot`/`catplot` comparison across datasets/outputs, the
-    same shape `leer_metricas.ipynb` built by hand from regex matches.
+    the grouped/faceted bar-chart comparison in
+    step_4_aggregate_training_metrics.ipynb's `comparison_plot`, the same
+    shape `leer_metricas.ipynb` built by hand from regex matches.
 
     `variant_label` is an optional extra column (e.g. a model/architecture
     name) for comparing more than one trained model side by side.

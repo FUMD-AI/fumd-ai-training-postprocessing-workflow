@@ -29,7 +29,7 @@
 #SBATCH --nodelist=gpgpu01
 
 REPO_DIR=.                              # this repository's root
-IMAGE=image_cuda_jupyter.sif            # built from requirements/train.txt (see README)
+IMAGE=image_jupiter_eosc.sif            # built from requirements/train.txt (see README)
 
 # Optional: override this run's parameters instead of hand-editing the
 # notebook (any parameter name from its parameters cell works the same way):

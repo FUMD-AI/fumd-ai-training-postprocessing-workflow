@@ -971,7 +971,7 @@
       "@id": "requirements/train.txt",
       "@type": "File",
       "encodingFormat": "text/plain",
-      "description": "Python dependencies for Steps 1-4, pinned exactly to this project's Slurm/Singularity execution image (image_cuda_jupyter.sif, Python 3.10.9)."
+      "description": "Python dependencies for Steps 1-4, pinned exactly to this project's Slurm/Singularity execution image (image_jupiter_eosc.sif, Python 3.10.9)."
     },
     {
       "@id": "requirements/postprocess.txt",
