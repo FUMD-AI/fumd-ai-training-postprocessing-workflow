@@ -72,9 +72,36 @@ singularity exec --nv --pwd /workflow --bind .:/workflow image_cuda_jupyter.sif 
 
 (`slurm/train_model.sbatch` / `slurm/evaluate_model.sbatch` are ready-to-edit
 templates for this.) `jupyter execute` is `nbclient`'s own CLI -- it has no
-parameter-injection mechanism, so **the way to configure a run is to edit
-the notebook's own `parameters` cell before submitting it**, exactly as the
-original exploratory notebooks were copied and hand-edited per dataset.
+`-p NAME VALUE`-style parameter-injection flag the way `papermill` does, so
+a run is configured one of two ways:
+
+1. **Edit the notebook's own `parameters` cell** before submitting it,
+   exactly as the original exploratory notebooks were copied and
+   hand-edited per dataset; or
+2. **Export environment variables** of the same name before calling
+   `singularity exec`/`jupyter execute` (see the commented-out examples in
+   `slurm/*.sbatch`). Every notebook has a small cell immediately after its
+   `parameters` cell that reads any matching environment variables via
+   `fumd_training_workflow.notebook_runner.env_override` and applies them,
+   leaving the parameters-cell default in place for anything left unset.
+   `singularity exec` (these templates don't pass `--cleanenv`) forwards
+   the submitting shell's environment into the container, so this works
+   the same way under Slurm as it does when calling `jupyter execute`
+   directly. Values are JSON-decoded when possible (so
+   `SEQUENCE_LENGTH=6`, `FUTURE_STEPS='[1,2,3]'`, etc. round-trip to the
+   right type), and used as a plain string otherwise (the common case: a
+   bare path like `DATASET_PATH=/abs/path/dataset_labeled_w3.csv`).
+
+Each notebook also normalizes its own working directory at the top of its
+imports cell: `jupyter execute <notebook>` runs with that notebook's *own*
+containing directory as the kernel's cwd (`notebooks/` for a standalone
+step notebook -- not the repository root), so every notebook `chdir`s back
+up to the repository root first if it detects it was launched that way.
+This is what makes `sys.path.insert(0, "src")` and every relative default
+path (`example-data/...`, `pipeline_run`, ...) resolve the same way whether
+a notebook is run standalone (`jupyter execute notebooks/step_N...ipynb`,
+including every `slurm/*.sbatch` submission) or chained from
+`run_pipeline.ipynb`.
 
 `run_pipeline.ipynb` still exists for local/interactive convenience (e.g.
 running the whole chain against the bundled example on a laptop, or as a

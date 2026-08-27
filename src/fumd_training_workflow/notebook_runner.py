@@ -78,11 +78,50 @@ def run_step(
     if parameters:
         inject_parameters(nb, parameters)
 
-    client = NotebookClient(nb, kernel_name=kernel_name, timeout=timeout)
-    client.execute(cwd=cwd or os.getcwd())
+    # Set the kernel's working directory the same way the `jupyter execute`
+    # CLI itself does (resources['metadata']['path']), rather than passing
+    # cwd= to NotebookClient.execute() -- that kwarg is not a documented
+    # NotebookClient.execute() parameter (it flows through **kwargs to
+    # kernel startup, which is not a reliable place to depend on), while
+    # resources['metadata']['path'] is nbclient's own supported mechanism.
+    resources = {"metadata": {"path": cwd or os.getcwd()}}
+    client = NotebookClient(nb, kernel_name=kernel_name, timeout=timeout, resources=resources)
+    client.execute()
 
     out_dir = os.path.dirname(output_path)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
     nbformat.write(nb, output_path)
     return nb
+
+
+def env_override(name: str, default):
+    """Return `os.environ[name]` if set, else `default` unchanged.
+
+    `jupyter execute` (unlike papermill) has no `-p NAME VALUE` flag -- the
+    only way to change a parameter without hand-editing the notebook file
+    is an environment variable read at execution time, e.g.:
+
+        DATASET_PATH=/abs/path/dataset_labeled_w3.csv \
+        OUTPUT_DIR=/abs/path/pipeline_run \
+        jupyter execute notebooks/step_1_load_and_window_dataset.ipynb
+
+    The environment variable's value is JSON-decoded first (so ints,
+    floats, lists, dicts, null, and booleans all round-trip correctly --
+    e.g. `FUTURE_STEPS='[1,2,3]'` or `SEQUENCE_LENGTH=6`); if it isn't
+    valid JSON, it's used as-is (the common case: a plain path string like
+    `/abs/path/dataset_labeled_w3.csv`, which is not valid JSON on its
+    own). Under Slurm/Singularity, `singularity exec` (without
+    `--cleanenv`, which this project's sbatch templates do not use) passes
+    the submitting shell's environment through into the container, so
+    `export`-ing these before `sbatch`/`singularity exec` works the same
+    way. Each step notebook's own parameters-cell default is used when the
+    variable is unset.
+    """
+    if name not in os.environ:
+        return default
+    raw = os.environ[name]
+    try:
+        return json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        return raw

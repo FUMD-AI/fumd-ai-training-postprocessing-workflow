@@ -5,8 +5,11 @@
 # by default since `model.predict(...)` benefits from one too, though
 # Step 3 itself doesn't train anything.
 #
-# Before submitting: edit step_3_evaluate_model.ipynb's own "parameters"
-# cell (RUN_DIR, CROSS_RUN_DATASET_PATHS, ...) for this run, and update
+# Before submitting: set this run's parameters (RUN_DIR,
+# CROSS_RUN_DATASET_PATHS, ...) either by editing
+# step_3_evaluate_model.ipynb's own "parameters" cell, or by exporting
+# environment variables of the same name below the REPO_DIR/IMAGE lines --
+# see train_model.sbatch's header comment for why this works. Also update
 # IMAGE/REPO_DIR/--nodelist as in train_model.sbatch.
 
 #SBATCH --job-name fumd_evaluate_model
@@ -18,6 +21,11 @@
 
 REPO_DIR=.
 IMAGE=image_cuda_jupyter.sif
+
+# Optional: override this run's parameters (see train_model.sbatch):
+# export RUN_DIR=/absolute/path/on/cluster/pipeline_run
+# export CROSS_RUN_DATASET_PATHS='["/abs/other_dataset_labeled_w3.csv"]'
+
 NOTEBOOK=notebooks/step_3_evaluate_model.ipynb
 
 mkdir -p logs
