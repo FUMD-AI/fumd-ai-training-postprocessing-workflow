@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: "If you use this workflow, please cite it as below."
+title: "FUMD-AI Training & Postprocessing Workflow"
+version: 0.1.0
+date-released: "2026-08-27"
+license:
+  - MIT
+  - CC-BY-4.0
+type: software
+authors:
+  - family-names: Bernad
+    given-names: Cristina
+    orcid: "https://orcid.org/0000-0001-9537-415X"
+    affiliation: "Miguel Hernandez University"
+  - family-names: Filiposka
+    given-names: Sonja
+    email: sonja.filiposka@finki.ukim.mk
+    orcid: "https://orcid.org/0000-0003-0034-2855"
+    affiliation: "Ss. Cyril and Methodius University in Skopje"
+  - family-names: Gilly
+    given-names: Katja
+    orcid: "https://orcid.org/0000-0002-8985-0639"
+    affiliation: "Miguel Hernandez University"
+keywords:
+  - SUMO
+  - OMNeT++
+  - vehicular networks
+  - cellular handover
+  - mobility prediction
+  - LSTM
+  - attention mechanism
+  - 5G
+  - V2X
+abstract: >-
+  Trains and evaluates a BiLSTM + Bahdanau-attention model that forecasts a
+  vehicle's serving cell 1-7 seconds ahead from the FUMD-AI preprocessing
+  workflow's AI-ready labeled dataset, then postprocesses the results:
+  training-metrics comparison across runs, real-measurement base-station
+  location estimation, and spatial mapping of handover/migration events.
+  Six Jupyter notebooks cover the pipeline from windowed dataset to mapped
+  migration events, plus a local/interactive orchestrator notebook
+  (run_pipeline.ipynb) and Slurm/Singularity submission templates for the
+  GPU training/evaluation steps.
+repository-code: "https://github.com/FUMD-AI/fumd-ai-training-postprocessing-workflow"
+# doi: "<add DOI here once registered/archived, e.g. via WorkflowHub/Zenodo>"

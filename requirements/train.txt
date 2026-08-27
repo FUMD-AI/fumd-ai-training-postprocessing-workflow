@@ -1,0 +1,31 @@
+# Steps 1-4 (data windowing, training, evaluation, metrics aggregation) --
+# pinned to match this project's Slurm/Singularity execution image
+# (image_cuda_jupyter.sif, Python 3.10.9) exactly, so a local dev
+# environment behaves identically to the GPU cluster it's ultimately run
+# on. Do not loosen these pins without rebuilding/re-validating the .sif.
+numpy==1.26.4
+pandas==2.2.2
+tensorflow==2.14.0
+keras==2.14.0
+scikit-learn==1.5.2
+
+# Notebook execution (`jupyter execute`, i.e. nbclient's CLI) and its
+# transitive dependencies (nbformat, nbclient) -- see
+# src/fumd_training_workflow/notebook_runner.py's docstring for why this
+# project deliberately builds on these instead of adding a papermill
+# dependency.
+nbconvert
+ipykernel
+
+# Already present in the .sif image; listed for completeness/local dev.
+matplotlib==3.9.2
+matplotlib-inline==0.1.7
+tensorflow-estimator==2.14.0
+
+# Not used by any notebook in this repository yet -- included because the
+# .sif image ships it, and it's a natural extension point for tuning
+# step_2_train_model.ipynb's hyperparameters (LSTM_UNITS, DROPOUT_RATE, ...).
+keras-tuner==1.4.7
+
+joblib      # scaler/encoder persistence (step_1) -- a scikit-learn dependency already, listed explicitly since we import it directly
+seaborn     # step_4's comparison plots
