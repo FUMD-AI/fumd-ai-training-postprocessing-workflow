@@ -39,7 +39,7 @@ from .data import (
     fit_scaler,
     apply_scaler,
 )
-from .model import BahdanauAttention, build_model
+from .model import BahdanauAttention, ZeroInitialState, build_model
 
 __all__ = [
     "DEFAULT_FEATURE_COLUMNS",
@@ -56,5 +56,6 @@ __all__ = [
     "fit_scaler",
     "apply_scaler",
     "BahdanauAttention",
+    "ZeroInitialState",
     "build_model",
 ]

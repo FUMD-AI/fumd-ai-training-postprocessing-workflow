@@ -41,7 +41,6 @@ from tensorflow.keras.layers import (
     Dropout,
     Embedding,
     LSTM,
-    Lambda,
     Layer,
 )
 from tensorflow.keras.optimizers import Adam
@@ -96,6 +95,39 @@ class BahdanauAttention(Layer):
         return config
 
 
+class ZeroInitialState(Layer):
+    """
+    Returns a batch of zero vectors shaped `(batch_size, units)`, with
+    `batch_size` inferred from `inputs` (any tensor sharing the model's
+    batch dimension) -- used as the decoder's initial state before the
+    first forecast step.
+
+    This used to be `Lambda(lambda x: tf.zeros((tf.shape(x)[0], units)))`,
+    which works fine for training/inference within one process, but the
+    `.keras` format's "safe mode" deserialization refuses by default to
+    load a Lambda layer's embedded Python bytecode when reopening a saved
+    model (`ValueError: Requested the deserialization of a Lambda layer
+    with a Python \`lambda\` inside it...`) -- exactly what
+    step_3_evaluate_model.ipynb does. A proper subclassed Layer with
+    `get_config()` (same pattern as `BahdanauAttention` above) serializes
+    as ordinary, safe layer config instead of bytecode, so the saved model
+    reloads without needing `safe_mode=False`.
+    """
+
+    def __init__(self, units: int, **kwargs):
+        super().__init__(**kwargs)
+        self.units = units
+
+    def call(self, inputs):
+        batch_size = tf.shape(inputs)[0]
+        return tf.zeros((batch_size, self.units))
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({"units": self.units})
+        return config
+
+
 def build_model(
     sequence_length: int,
     num_features: int,
@@ -139,7 +171,7 @@ def build_model(
     outputs = []
     # Step 0's decoder state is a zero vector; each later step conditions on
     # the embedding of the *previous* step's predicted (argmax) class.
-    decoder_state = Lambda(lambda x: tf.zeros((tf.shape(x)[0], embedding_dim)))(encoder_input)
+    decoder_state = ZeroInitialState(units=embedding_dim, name="zero_initial_decoder_state")(encoder_input)
 
     for t in range(n_steps):
         context_vector, _attn_weights = attention_layers[t]([encoder_out, decoder_state])
