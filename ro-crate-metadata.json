@@ -20,7 +20,7 @@
       "@id": "./",
       "@type": "Dataset",
       "name": "FUMD-AI Training & Postprocessing Workflow",
-      "description": "Trains and evaluates a BiLSTM + Bahdanau-attention model that forecasts a vehicle's serving cell 1-7 seconds ahead from the FUMD-AI preprocessing workflow's AI-ready labeled dataset (dataset_labeled_w<W>.csv), then postprocesses the results. Five Jupyter notebooks cover the pipeline: window the dataset and fit encoders/scaler (1), train the model (2), evaluate it on a held-out split plus optional cross-run generalization checks (3), aggregate and compare metrics across runs (4), and map handover/migration events spatially by type and destination cell (5). A local/interactive orchestrator notebook, run_pipeline.ipynb, chains Steps 1-4 via one set of top-level parameters and runs out of the box against a bundled example data slice; Step 5 is an optional postprocessing step, runnable standalone against the same bundled example or a real preprocessing run. Steps 1-3 are GPU/Slurm workloads intended to run inside a pinned Singularity/Apptainer container (see requirements/train.txt and slurm/*.sbatch) via bare `jupyter execute` -- there is no papermill in the target execution image, so headless parameterization is done by src/fumd_training_workflow/notebook_runner.py, a small nbformat/nbclient-based replacement (see that module's docstring), or by hand-editing each notebook's own tagged parameters cell before Slurm submission. Steps 4-5 are local/no-GPU postprocessing steps. An earlier version of this workflow also included a real-measurement base-station-location-estimation step, refactored from estimacion_antenas.ipynb; it was dropped because no real RSRP measurement data exists in either connected project folder to validate or exercise it against -- see README.md's \"Notes on the source notebooks\" section. See README.md for the full step-by-step description, inputs/outputs, execution environment, and validation status. Unless otherwise indicated, source code is MIT-licensed and explanatory text/figures are CC BY 4.0; input datasets retain the licences stated in their own metadata/source records.",
+      "description": "Trains and evaluates a BiLSTM + Bahdanau-attention model that forecasts a vehicle's serving cell 1-7 seconds ahead from the FUMD-AI preprocessing workflow's AI-ready labeled dataset (dataset_labeled_w<W>.csv), then postprocesses the results. Five Jupyter notebooks cover the pipeline: window the dataset and fit encoders/scaler (1), train the model (2), evaluate it on a held-out split plus optional cross-run generalization checks (3), aggregate and compare metrics across runs (4), and map handover/migration events spatially by type and destination cell (5). A local/interactive orchestrator notebook, run_pipeline.ipynb, chains Steps 1-5 via one set of top-level parameters and runs out of the box against a bundled example data slice (Step 5 is skipped automatically if EVENTS_CSV_PATH is left unset); Step 5 also stands on its own for a standalone run against any real preprocessing output. Steps 1-3 are GPU/Slurm workloads intended to run inside a pinned Singularity/Apptainer container (see requirements/train.txt and slurm/*.sbatch) via bare `jupyter execute` -- there is no papermill in the target execution image, so headless parameterization is done by src/fumd_training_workflow/notebook_runner.py, a small nbformat/nbclient-based replacement (see that module's docstring), or by hand-editing each notebook's own tagged parameters cell before Slurm submission. Steps 4-5 are local/no-GPU postprocessing steps. An earlier version of this workflow also included a real-measurement base-station-location-estimation step, refactored from estimacion_antenas.ipynb; it was dropped because no real RSRP measurement data exists in either connected project folder to validate or exercise it against -- see README.md's \"Notes on the source notebooks\" section. See README.md for the full step-by-step description, inputs/outputs, execution environment, and validation status. Unless otherwise indicated, source code is MIT-licensed and explanatory text/figures are CC BY 4.0; input datasets retain the licences stated in their own metadata/source records.",
       "version": "0.1.1",
       "license": [
         "https://spdx.org/licenses/MIT",
@@ -210,8 +210,8 @@
         "SoftwareSourceCode",
         "ComputationalWorkflow"
       ],
-      "name": "Local/interactive orchestrator: Steps 1-4 end to end",
-      "description": "Chains Steps 1-4 (load & window -> train -> evaluate -> aggregate metrics) via src/fumd_training_workflow/notebook_runner.py, passing each step's output into the next from one set of top-level parameters, for local/interactive development. Writes every intermediate/final file, plus an executed copy of each step notebook for provenance, under OUTPUT_DIR/executed/. For HPC/Slurm submission, each of Steps 1-3 is instead run standalone via slurm/*.sbatch (see this notebook's markdown cell). Step 5 is not chained here -- it's run standalone, separately from the core GPU chain.",
+      "name": "Local/interactive orchestrator: Steps 1-5 end to end",
+      "description": "Chains Steps 1-4 (load & window -> train -> evaluate -> aggregate metrics) via src/fumd_training_workflow/notebook_runner.py, passing each step's output into the next from one set of top-level parameters, for local/interactive development. Step 5 (map migration events) is chained too when EVENTS_CSV_PATH is set (positions are reused from DATASET_PATH); leave it unset/empty to skip Step 5. Writes every intermediate/final file, plus an executed copy of each step notebook for provenance, under OUTPUT_DIR/executed/. For HPC/Slurm submission, each of Steps 1-3 is instead run standalone via slurm/*.sbatch (see this notebook's markdown cell).",
       "conformsTo": {
         "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
       },
@@ -252,6 +252,9 @@
         },
         {
           "@id": "#param-cross-run-dataset-paths"
+        },
+        {
+          "@id": "#param-events-csv-path"
         }
       ],
       "output": [
@@ -263,6 +266,9 @@
         },
         {
           "@id": "#param-step4-comparison"
+        },
+        {
+          "@id": "#param-migration-map"
         }
       ],
       "hasPart": [
@@ -277,6 +283,9 @@
         },
         {
           "@id": "notebooks/step_4_aggregate_training_metrics.ipynb"
+        },
+        {
+          "@id": "notebooks/step_5_map_migration_events.ipynb"
         }
       ]
     },
@@ -822,7 +831,7 @@
       "@id": "#param-rp-output-dir",
       "@type": "FormalParameter",
       "name": "OUTPUT_DIR (run_pipeline.ipynb)",
-      "description": "Directory the chained Steps 1-4 write into (passed through as each step's own OUTPUT_DIR).",
+      "description": "Directory the chained Steps 1-4 write into (passed through as each step's own OUTPUT_DIR); Step 5's migration maps go into OUTPUT_DIR/migration_maps.",
       "defaultValue": "pipeline_run"
     },
     {

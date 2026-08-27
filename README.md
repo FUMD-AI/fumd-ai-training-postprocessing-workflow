@@ -8,10 +8,11 @@ comparison across runs and spatial mapping of handover/migration events.
 
 ## Quick start
 
-Out of the box, `run_pipeline.ipynb` runs Steps 1-4 against a tiny bundled
-example slice (`example-data/dataset_labeled_example.csv`, 8 vehicles cut
-from a real preprocessing-workflow run) with a small `EPOCHS`, so the whole
-chain is runnable immediately:
+Out of the box, `run_pipeline.ipynb` runs Steps 1-5 against a tiny bundled
+example slice (`example-data/dataset_labeled_example.csv` +
+`events_all_example.csv`, 8 vehicles cut from a real preprocessing-workflow
+run) with a small `EPOCHS`, so the whole chain -- including the migration-
+event map -- is runnable immediately, in one call:
 
 ```
 jupyter execute run_pipeline.ipynb
@@ -54,7 +55,7 @@ workflow's own output and needs no GPU.
 | 4 | `step_4_aggregate_training_metrics.ipynb` | Compare Step 3 metrics across runs/variants -- tables and plots. | one or more Step 3 output dirs | `metrics_long.csv`, `metrics_summary.csv`, comparison plots | no |
 | 5 *(optional)* | `step_5_map_migration_events.ipynb` | Plot handover/migration events by type and destination cell over vehicle positions, optionally with real BS coordinates and a street map. | preprocessing's own `dataset_labeled_w<W>.csv` + `events_all_w<W>.csv` | `migration_events_by_type.pdf` | no |
 
-`run_pipeline.ipynb` chains Steps 1-4 for local/interactive use (see
+`run_pipeline.ipynb` chains Steps 1-5 for local/interactive use (see
 "Execution environment" for why it isn't meant for the Slurm-submitted GPU
 steps). Every notebook has a single tagged `parameters` cell and also
 stands on its own.
@@ -103,7 +104,7 @@ including every `slurm/*.sbatch` submission) or chained from
 
 `run_pipeline.ipynb` still exists for local/interactive convenience (e.g.
 running the whole chain against the bundled example on a laptop, or as a
-quick end-to-end smoke test) -- it chains the four core steps via
+quick end-to-end smoke test) -- it chains all five steps via
 `src/fumd_training_workflow/notebook_runner.py`, which does the same
 "overwrite-the-parameters-cell-then-execute" trick `papermill` is built
 around, implemented directly on `nbformat`/`nbclient` (both already required
@@ -148,7 +149,7 @@ migration-state accuracy breakdown both have something to show.
 .
 ├── README.md
 ├── CITATION.cff                 citation metadata (GitHub/Zenodo citation widget)
-├── run_pipeline.ipynb            local/interactive orchestrator: runs Steps 1-4 in one call
+├── run_pipeline.ipynb            local/interactive orchestrator: runs Steps 1-5 in one call
 ├── LICENSE.txt                  MIT (source code)
 ├── LICENSE-CC-BY-4.0.txt        CC BY 4.0 (explanatory text/figures)
 ├── ro-crate-metadata.json       FAIR/WorkflowHub packaging metadata
@@ -301,7 +302,11 @@ layer swap (models trained with v0.1.0 are not loadable with this version;
 retrain). Also dropped the real-measurement base-station-location-estimation
 step (`step_5_estimate_bs_locations.ipynb` / `bs_location.py`) and
 renumbered the migration-event-mapping step from Step 6 to Step 5 -- see
-"Notes on the source notebooks" for why.
+"Notes on the source notebooks" for why. `run_pipeline.ipynb` now chains
+Step 5 too (controlled by its own `EVENTS_CSV_PATH` parameter, skipped if
+unset) so a full local test run -- including the migration-event map --
+is one `jupyter execute run_pipeline.ipynb` call instead of five separate
+ones.
 
 **v0.1.0** initial release: rebuilds the five exploratory notebooks listed
 above as this parameterized pipeline. See "Notes on the source notebooks"
@@ -346,8 +351,8 @@ on WorkflowHub.
 [Workflow RO-Crate](https://w3id.org/workflowhub/workflow-ro-crate/1.0)
 (RO-Crate 1.1 + the WorkflowHub workflow profile), the packaging format
 WorkflowHub registration expects: `run_pipeline.ipynb` is the crate's main
-workflow entity (chaining Steps 1-4), Step 5 is separately described as its
-own optional workflow entity, and every notebook parameter is
+workflow entity (chaining Steps 1-5 -- Step 5 optionally, when
+`EVENTS_CSV_PATH` is set), and every notebook parameter is
 recorded as a `FormalParameter` with its description and default value, so
 the crate stays consistent with each notebook's own `parameters` cell. It
 also records authorship/ORCIDs, the FUMD-AI funding grant, licensing, and
