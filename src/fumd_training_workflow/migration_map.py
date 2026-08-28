@@ -272,6 +272,8 @@ def plot_events_by_type(
     cols: int = 2,
     title: str = "Event locations by type: destination BS",
     out_path: str | None = None,
+    zoom_to_events: bool = True,
+    zoom_padding_frac: float = 0.1,
 ):
     """
     Grid of subplots, one per event `case_short`, scattering matched event
@@ -283,6 +285,14 @@ def plot_events_by_type(
     (e.g. from `pyrosm`'s `OSM.get_network(...)`, duck-typed via a `.plot`
     attribute) or a plain list of linestrings -- each a list of `(x, y)`
     tuples -- such as `load_osm_lines_from_geopackage`'s return value.
+
+    `edges` (a full street network) is typically far larger than the area
+    events actually occurred in, so by default (`zoom_to_events=True`)
+    every subplot is cropped to the bounding box of all matched events in
+    `ev` (padded by `zoom_padding_frac` of that box's width/height on each
+    side, plus any `bs_coords` markers so they aren't clipped) instead of
+    the full extent of `edges` -- pass `zoom_to_events=False` to see the
+    whole map (e.g. for spatial context) instead.
     """
     import matplotlib.pyplot as plt
 
@@ -291,6 +301,21 @@ def plot_events_by_type(
     fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 5 * rows), squeeze=False)
     colormap = plt.get_cmap("tab10")
     color_by_group = {g: colormap(i % 10) for i, g in enumerate(order_groups)}
+
+    xlim = ylim = None
+    if zoom_to_events and not ev.empty:
+        xs = list(ev["x_event"]); ys = list(ev["y_event"])
+        if bs_coords:
+            xs += [lon for lon, lat in bs_coords.values()]
+            ys += [lat for lon, lat in bs_coords.values()]
+        x_min, x_max = min(xs), max(xs)
+        y_min, y_max = min(ys), max(ys)
+        # A single point (or all-identical coordinates) has zero width/height
+        # -- pad by a small absolute amount in that case instead of 10% of 0.
+        x_pad = (x_max - x_min) * zoom_padding_frac or max(abs(x_max), 1.0) * 0.05
+        y_pad = (y_max - y_min) * zoom_padding_frac or max(abs(y_max), 1.0) * 0.05
+        xlim = (x_min - x_pad, x_max + x_pad)
+        ylim = (y_min - y_pad, y_max + y_pad)
 
     for i, case in enumerate(types):
         r, c = divmod(i, cols)
@@ -313,7 +338,16 @@ def plot_events_by_type(
                 ax.scatter(lon, lat, s=200, marker="o", facecolors="none", edgecolors=color, linewidths=2, zorder=10)
                 ax.scatter(lon, lat, s=40, marker="o", color=color, zorder=11)
         ax.set_title(case); ax.set_xlabel("X"); ax.set_ylabel("Y")
-        ax.axis("equal")
+        if xlim is not None:
+            # Set the crop explicitly, then keep the aspect ratio square by
+            # resizing the subplot's box rather than re-expanding the limits
+            # back out -- ax.axis("equal") alone re-autoscales to the data
+            # (here, the *un-cropped* edges/scatter extent), undoing the crop.
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
+            ax.set_aspect("equal", adjustable="box")
+        else:
+            ax.axis("equal")
         # `axis("equal")` shrinks each subplot's plotted box to match the
         # data's aspect ratio, which narrows the space available for x tick
         # labels -- cap the tick count and rotate so long coordinate values
