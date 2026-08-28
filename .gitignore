@@ -31,10 +31,13 @@ logs/
 *.out
 *.error
 
-# Bring-your-own data this workflow deliberately doesn't bundle (see
-# the map-migration-events step's own OSM_PBF_PATH parameter) -- ignored so
-# a real run's large OSM extract never gets committed by accident.
+# Bring-your-own data this workflow deliberately doesn't bundle (see the
+# map-migration-events step's own OSM_PBF_PATH/OSM_GEOPACKAGE_PATH
+# parameters) -- ignored so a real run's large OSM extract never gets
+# committed by accident.
 *.osm.pbf
+*.gpkg
+*.geopackage.zip
 
 # Editor
 .vscode/
