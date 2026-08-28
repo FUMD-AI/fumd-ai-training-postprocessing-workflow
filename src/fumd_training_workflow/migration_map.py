@@ -237,9 +237,22 @@ def match_events_to_positions(
 def add_case_short(events: pd.DataFrame, case_col: str = "case", exclude: tuple[str, ...] = ("C4_no_estable",)) -> pd.DataFrame:
     """Drop excluded case labels (default: the diagnostic-only "unstable, no
     handover" case) and extract a short case code (e.g. "C1", "C2a") into
-    `case_short`, sorted for consistent plot ordering."""
+    `case_short`, sorted for consistent plot ordering.
+
+    Also corrects a known mislabeling in the upstream event data: the
+    "C2b_handover_sin_historico" ("no prior history") and "C3_pingpong"
+    ("ABA") cases have their numeric prefixes swapped -- rows the raw
+    `case` column tags "C2b" are the ABA/ping-pong case and should read
+    "C3", and rows it tags "C3" are the no-prior-history case and should
+    read "C2b". The original `mapa_EB_K_mapAlacant.ipynb` notebook applied
+    this same swap by hand at plot time (`if case == 'C2b': case = 'C3'
+    ...`); this reproduces it here once instead, so every downstream
+    consumer of `case_short` (plots, tables, future analysis) sees the
+    corrected code without needing to know about the swap.
+    """
     ev = events[~events[case_col].astype(str).isin(exclude)].copy()
     ev["case_short"] = ev[case_col].astype(str).str.extract(r"^(C\d+[a-z]?)", expand=False)
+    ev["case_short"] = ev["case_short"].replace({"C2b": "C3", "C3": "C2b"})
     return ev.dropna(subset=["case_short"]).reset_index(drop=True)
 
 
