@@ -84,6 +84,15 @@
 #      precedence -- see train_model.sbatch's header comment (point 4) for
 #      the full explanation. Leave it in place unless you have a specific
 #      reason to want host packages to take precedence.
+#   6. --env XLA_FLAGS below (via CUDA_NVVM_DIR) points XLA at a real CUDA
+#      nvvm/libdevice + ptxas -- this image only ships CUDA runtime
+#      libraries, not the toolkit components XLA needs to JIT-compile
+#      Keras's own optimizer.apply_gradients step (Step 2's training, and
+#      Step 3's model.evaluate/predict for both the main and combined
+#      tracks), so this job would otherwise crash on Step 2's very first
+#      training step with "libdevice not found"/"Failed to launch ptxas"
+#      -- see train_model.sbatch's header comment (point 5) for the full
+#      explanation and how CUDA_NVVM_DIR's default below was populated.
 
 #SBATCH --job-name fumd_run_pipeline
 #SBATCH --output logs/run_pipeline_%j.out
@@ -94,6 +103,7 @@
 
 REPO_DIR=.                              # this repository's root
 DATASETS_DIR=/home/hpc/users/sonja.filiposka/resources/datasets    # this cluster's actual datasets location -- see point 3 above; adjust if yours lives elsewhere
+CUDA_NVVM_DIR=/home/hpc/users/sonja.filiposka/resources/cuda_nvvm    # nvvm/libdevice + bin/ptxas -- see point 6 above; adjust if yours lives elsewhere
 IMAGE=/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif    # built from requirements/train.txt (see README)
 
 # Optional: override this run's parameters instead of hand-editing the
@@ -119,6 +129,7 @@ NOTEBOOK=run_pipeline.ipynb
 mkdir -p logs
 singularity exec --nv --pwd /workflow \
     --env PYTHONNOUSERSITE=1 \
+    --env XLA_FLAGS="--xla_gpu_cuda_data_dir=${CUDA_NVVM_DIR}" \
     --bind "${REPO_DIR}:/workflow" \
     --bind "${DATASETS_DIR}:/datasets" \
     "${IMAGE}" \

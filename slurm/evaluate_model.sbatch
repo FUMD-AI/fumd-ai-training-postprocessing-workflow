@@ -26,6 +26,13 @@
 # mounted into the container along with the rest of $HOME) from shadowing
 # the container's own pinned dependencies -- see train_model.sbatch's
 # header comment (point 4) for the full explanation.
+#
+# --env XLA_FLAGS below (via CUDA_NVVM_DIR) points XLA at a real CUDA
+# nvvm/libdevice + ptxas -- this image only ships CUDA runtime libraries,
+# not the toolkit components XLA needs to JIT-compile Keras's own
+# optimizer.apply_gradients step, so `model.evaluate`/`model.predict` here
+# would otherwise crash the same way training does -- see
+# train_model.sbatch's header comment (point 5) for the full explanation.
 
 #SBATCH --job-name fumd_evaluate_model
 #SBATCH --output logs/evaluate_model_%j.out
@@ -36,6 +43,7 @@
 
 REPO_DIR=.
 DATASETS_DIR=/home/hpc/users/sonja.filiposka/resources/datasets    # this cluster's actual datasets location -- see header comment above; adjust if yours lives elsewhere
+CUDA_NVVM_DIR=/home/hpc/users/sonja.filiposka/resources/cuda_nvvm    # nvvm/libdevice + bin/ptxas -- see header comment above; adjust if yours lives elsewhere
 IMAGE=/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif
 
 # Optional: override this run's parameters (see train_model.sbatch):
@@ -47,6 +55,7 @@ NOTEBOOK=notebooks/step_3_evaluate_model.ipynb
 mkdir -p logs
 singularity exec --nv --pwd /workflow \
     --env PYTHONNOUSERSITE=1 \
+    --env XLA_FLAGS="--xla_gpu_cuda_data_dir=${CUDA_NVVM_DIR}" \
     --bind "${REPO_DIR}:/workflow" \
     --bind "${DATASETS_DIR}:/datasets" \
     "${IMAGE}" \

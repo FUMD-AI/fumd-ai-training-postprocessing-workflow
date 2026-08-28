@@ -16,6 +16,22 @@ tensorflow==2.14.0
 keras==2.14.0
 scikit-learn==1.5.2
 
+# KNOWN GAP as of image_jupiter_eosc.sif's current build: it ships CUDA's
+# *runtime* libraries (cuDNN/cuBLAS/cuFFT -- training and evaluation both
+# reach a real GPU fine) but not the CUDA *toolkit*'s nvvm/libdevice and
+# ptxas, which XLA needs to JIT-compile certain GPU kernels -- notably
+# Keras's own optimizer.apply_gradients step, which is unconditionally
+# XLA-compiled regardless of anything in this project's own notebook code.
+# Without it, Step 2 (training) crashes on its very first step with
+# "libdevice not found"/"Failed to launch ptxas". The real fix is
+# rebuilding this image with the CUDA toolkit's nvcc/nvvm component
+# included (e.g. a pip package from NVIDIA's `nvidia-cuda-*` family
+# matching CUDA 11.8, or a full system CUDA toolkit install at build time
+# -- confirm the exact package name/version against a real index when
+# rebuilding, since it isn't verified here) so the current per-job
+# workaround (slurm/*.sbatch's CUDA_NVVM_DIR / XLA_FLAGS, see
+# train_model.sbatch's header comment) is no longer needed.
+
 # Notebook execution (`jupyter execute`, i.e. nbclient's CLI) and its
 # transitive dependencies (nbformat, nbclient) -- see
 # src/fumd_training_workflow/notebook_runner.py's docstring for why this

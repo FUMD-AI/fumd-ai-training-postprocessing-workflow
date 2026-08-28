@@ -166,8 +166,8 @@ invocation (just against a different notebook):
   tradeoff against the per-step templates: this holds a GPU allocation for
   the whole run, including the CPU-only steps, which wastes GPU-node time
   on a contended queue; simpler to submit and reason about (one job, one
-  log) is the upside. Neither pattern has been exercised on real Slurm
-  infrastructure yet -- see "Validation status" below.
+  log) is the upside. This chaining/GPU-inheritance claim has since been
+  confirmed on real Slurm infrastructure -- see "Validation status" below.
 
 `run_pipeline.sbatch` and `evaluate_model.sbatch` -- the two templates
 whose notebooks take raw `dataset_labeled_w<W>.csv`/`events_all_w<W>.csv`
@@ -208,6 +208,36 @@ startup) the first time this pipeline was run on real Slurm infrastructure.
 container always uses its own pinned packages regardless of what's on the
 host, while leaving the rest of `$HOME`'s auto-mount (and the environment-
 variable forwarding described below) untouched.
+
+All three templates also pass `--env XLA_FLAGS="--xla_gpu_cuda_data_dir=${CUDA_NVVM_DIR}"`.
+`image_jupiter_eosc.sif` ships CUDA's *runtime* libraries (cuDNN/cuBLAS/
+cuFFT -- training and evaluation both reach a real GPU fine) but not the
+CUDA *toolkit*'s `nvvm/libdevice` and `ptxas`, which XLA needs to
+JIT-compile certain GPU kernels -- notably Keras's own
+`optimizer.apply_gradients` step, which is unconditionally XLA-compiled
+regardless of anything in this project's own notebook code. Without this,
+Step 2 (training) crashes on its very first step: `libdevice not found at
+./libdevice.10.bc` if only `libdevice.10.bc` is missing, or `Failed to
+launch ptxas` if `ptxas` is missing too, as in this image -- both were hit
+in turn the first time this pipeline was run on real Slurm infrastructure,
+after the `PYTHONNOUSERSITE=1` fix above got past the earlier
+`typing_extensions` crash. `CUDA_NVVM_DIR` points `XLA_FLAGS` at a
+directory containing `<dir>/nvvm/libdevice/libdevice.10.bc` and
+`<dir>/bin/ptxas` -- on this cluster these were extracted once from
+another CUDA-toolkit-containing image already present (`image_jupyter.sif`'s
+CUDA 12.6 install) and copied to a location this project owns
+(`resources/cuda_nvvm/`), independent of that other image. The exact
+source CUDA version doesn't need to match this image's own CUDA 11.8
+runtime: `ptxas` is backward-compatible with older PTX, and
+`libdevice.10.bc` is stable IR bitcode -- confirmed working end-to-end (a
+full real training + evaluation run, see "Validation status" below) using
+CUDA 12.6's copies of both against this CUDA-11.8-targeted TensorFlow
+build. Since `$HOME` is auto-mounted (same as `PYTHONNOUSERSITE=1` above),
+`CUDA_NVVM_DIR` just needs to be a real path under `$HOME` -- no extra
+`--bind` required. The real fix is rebuilding `image_jupiter_eosc.sif`
+with the CUDA toolkit's `nvcc`/`nvvm` component included, so this
+workaround isn't needed -- see `requirements/train.txt`'s own note on
+this for why a specific pip package isn't pinned there yet.
 
 `jupyter execute` is `nbclient`'s own CLI -- it has no
 `-p NAME VALUE`-style parameter-injection flag the way `papermill` does, so
@@ -633,18 +663,60 @@ track's three per-source maps show BS rings in the identical positions as
 before this change, confirming the CSV round-trips to the exact same 9
 sites as the old Python literal did.
 
-Neither Slurm submission pattern has been exercised on real Slurm
-infrastructure yet -- the per-step templates (`train_model.sbatch`/
-`evaluate_model.sbatch`) or the single-job `run_pipeline.sbatch` (see
-"Execution environment" above for both). `run_pipeline.sbatch` in
-particular rests on a specific claim -- that a child kernel spawned by
-`run_pipeline.ipynb`'s own kernel inherits this job's GPU allocation --
-that follows from how Singularity/Slurm scope GPU access to a job's whole
-process tree, but was reasoned through rather than watched happen on a
-real cluster; worth confirming with a first real submission (e.g. a
-low-`EPOCHS` run) before relying on it for a real training run.
+Every run described above ran on macOS/Apple Silicon (`tensorflow-macos`),
+not the actual target Slurm/Singularity/GPU infrastructure. That gap is
+now closed: `run_pipeline.sbatch` (main track only, `DATASET_PATH`
+pointing at `1000_1`, no `COMBINE_DATASET_PATHS`, `EPOCHS=50`) has been
+submitted and run to completion for real on the project's Slurm cluster,
+via `image_jupiter_eosc.sif` on an A100 (MIG 7g.80gb slice) GPU node --
+confirming the `run_pipeline.ipynb`-as-single-job pattern's GPU-inheritance
+claim above holds in practice, not just in theory. Zero errors across all
+five executed notebooks, every expected artifact present (`model.keras`,
+`scaler.joblib`, `label_encoders.joblib`, `run_manifest.json`,
+`metrics_train_val.json`/`.csv`, `training_curves.png`,
+`metrics_comparison/`, `migration_maps/migration_events_by_type.pdf`).
+`EarlyStopping` stopped at `epochs_run: 10` (of the 50 requested), overall
+accuracy 93.9% (95.4% at +1s degrading to 91.9% at +7s, top-2 accuracy
+above 98.9% throughout), and the migration-window breakdown again shows
+the expected pattern -- 97.6% on steady-state rows vs. 66.7% in the
+pre-handover warning window -- consistent with every earlier local run.
+The per-step templates (`train_model.sbatch`/`evaluate_model.sbatch`)
+haven't separately been submitted on real Slurm yet, but exercise the
+identical `singularity exec ... jupyter execute <notebook>.ipynb`
+invocation against the same image, just one step and one job at a time,
+so nothing about this confirmation is specific to the chained path.
+
+Getting here surfaced two real infrastructure problems this project's
+local/macOS testing couldn't have caught, since neither exists outside a
+Singularity/Slurm environment: the `PYTHONNOUSERSITE=1` fix (host
+`~/.local` package leakage via Singularity's default `$HOME` auto-mount)
+and the `CUDA_NVVM_DIR`/`XLA_FLAGS` fix (this image's CUDA toolkit gap --
+`libdevice`/`ptxas` both missing) -- see "Execution environment" above for
+the full explanation of both. Both are now baked into all three
+`slurm/*.sbatch` templates by default.
 
 ## Development notes
+
+**v0.1.4** (2026-08-28): the first genuine end-to-end run on real Slurm/
+Singularity/GPU infrastructure (`run_pipeline.sbatch`, main track only,
+against `1000_1`) -- zero errors, every expected artifact produced, and
+accuracy numbers consistent with every earlier local run (93.9% overall,
+95.4%/91.9% at +1s/+7s, 97.6%/66.7% steady-state/warning-window); see
+"Validation status" above for the full numbers. Getting there surfaced and
+fixed two real infrastructure problems local/macOS testing couldn't have
+caught: `PYTHONNOUSERSITE=1` (host `~/.local` packages, auto-mounted via
+Singularity's default `$HOME` mount, were shadowing this project's pinned
+`jupyter_client`/`typing_extensions` versions, causing a `TypedDict...
+extra_items` `TypeError` at `jupyter execute` startup) and
+`CUDA_NVVM_DIR`/`XLA_FLAGS` (`image_jupiter_eosc.sif` ships CUDA's runtime
+libraries but not the toolkit's `nvvm/libdevice`/`ptxas`, which XLA needs
+to JIT-compile Keras's own `optimizer.apply_gradients` step, crashing Step
+2's very first training step). Also corrected `DATASETS_DIR`'s default in
+`run_pipeline.sbatch`/`evaluate_model.sbatch`: the sibling-of-repo
+`../datasets` convention didn't match this cluster's actual layout
+(`resources/datasets/`), so it now points there directly, same pattern as
+`IMAGE`. All three fixes are documented in full in "Execution environment"
+above and baked into all three `slurm/*.sbatch` templates by default.
 
 **v0.1.3** (2026-08-28): new optional
 `notebooks/step_1b_combine_and_window_datasets.ipynb` (alternate to Step 1:

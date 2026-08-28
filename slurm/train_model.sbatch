@@ -30,6 +30,28 @@
 #      the container always uses its own pinned dependency versions
 #      regardless of what's in your host ~/.local. Leave it in place unless
 #      you have a specific reason to want host packages to take precedence.
+#   5. This image is also missing the CUDA toolkit's nvvm/libdevice and
+#      ptxas components -- only the CUDA *runtime* libraries (cuDNN/
+#      cuBLAS/cuFFT) are present -- which XLA needs to JIT-compile certain
+#      GPU kernels, notably Keras's own optimizer.apply_gradients step,
+#      which is unconditionally XLA-compiled regardless of anything in
+#      this project's own notebook code. Without this, training crashes on
+#      the very first step: "libdevice not found at ./libdevice.10.bc"
+#      if only libdevice is missing, or "Failed to launch ptxas" if ptxas
+#      is missing too (as in this image). CUDA_NVVM_DIR below points
+#      XLA_FLAGS at a directory containing <dir>/nvvm/libdevice/
+#      libdevice.10.bc and <dir>/bin/ptxas -- these were extracted once
+#      from another CUDA-toolkit-containing image already present on this
+#      cluster and copied to a location this project owns, independent of
+#      that other image (the exact source CUDA version doesn't need to
+#      match this image's own CUDA 11.8 runtime: ptxas is backward-
+#      compatible with older PTX, and libdevice.10.bc is stable IR
+#      bitcode -- confirmed working here using CUDA 12.6's copies of
+#      both). Since $HOME is auto-mounted (point 4 above), CUDA_NVVM_DIR
+#      just needs to be a real path under $HOME -- no extra --bind
+#      required. The real fix is building image_jupiter_eosc.sif with the
+#      CUDA toolkit's nvcc/nvvm component included so this workaround
+#      isn't needed -- see requirements/train.txt's own note on this.
 
 #SBATCH --job-name fumd_train_model
 #SBATCH --output logs/train_model_%j.out
@@ -40,6 +62,7 @@
 
 REPO_DIR=.                              # this repository's root
 IMAGE=/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif            # built from requirements/train.txt (see README)
+CUDA_NVVM_DIR=/home/hpc/users/sonja.filiposka/resources/cuda_nvvm    # nvvm/libdevice + bin/ptxas -- see point 5 above; adjust if yours lives elsewhere
 
 # Optional: override this run's parameters instead of hand-editing the
 # notebook (any parameter name from its parameters cell works the same way):
@@ -49,6 +72,8 @@ IMAGE=/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif            # built 
 NOTEBOOK=notebooks/step_2_train_model.ipynb
 
 mkdir -p logs
-singularity exec --nv --pwd /workflow --env PYTHONNOUSERSITE=1 \
+singularity exec --nv --pwd /workflow \
+    --env PYTHONNOUSERSITE=1 \
+    --env XLA_FLAGS="--xla_gpu_cuda_data_dir=${CUDA_NVVM_DIR}" \
     --bind "${REPO_DIR}:/workflow" "${IMAGE}" \
     jupyter execute "/workflow/${NOTEBOOK}"
