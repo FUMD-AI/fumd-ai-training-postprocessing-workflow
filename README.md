@@ -313,15 +313,38 @@ undefining any parameter a caller didn't explicitly override, and a
 deserialization refuses to reload (`model.py` now uses a proper
 subclassed `ZeroInitialState` layer instead). Step 5's own migration-map
 plotting logic (`migration_map.py`, including the new GeoPackage street-map
-path) has since been verified against real data too -- a BBBike GeoPackage
+path) was then verified against real data too -- a BBBike GeoPackage
 extract and the real matched events from the `1000_1` run -- but only by
 exec()ing the notebook's actual cell source in sequence, not a genuine
 `jupyter execute`/papermill run, since no such tool was available in that
-verification environment. The Slurm-submitted standalone-notebook path (as
-opposed to the `run_pipeline.ipynb` chain), and a true `jupyter execute`
-confirmation of Step 5 and the full chained `run_pipeline.ipynb` (Steps
-1-5 together) against real data, have not yet happened -- worth doing
-both before fully trusting either path.
+verification environment.
+
+That gap has since been closed: a full `jupyter execute run_pipeline.ipynb`
+run (same macOS/Apple Silicon, `tensorflow-macos==2.14.0` environment,
+`EPOCHS=50`) against the same full `1200_1` preprocessing run (123,203
+rows), with `OSM_GEOPACKAGE_PATH` also set this time, chained Steps 1-5
+for real end to end -- zero errors in any of the five executed notebooks.
+`EarlyStopping` did exactly what it's meant to: `run_manifest.json` records
+`epochs_run: 8` against the `epochs_requested: 50` ceiling, and
+`training_curves.png` shows why -- validation loss bottoms out at epoch 4
+(0.987) and rises for the following three epochs while training loss keeps
+falling, patience=3 calls time at epoch 8, and `restore_best_weights=True`
+reloads the epoch-4/5 checkpoint. The final metrics landed almost exactly
+where the earlier 5-epoch run did (95.5%/92.0% top-1 at +1s/+7s here vs.
+95.53%/92.01% then; 97.6%/70.5% steady-state/warning-window here vs.
+97.58%/70.53% then) -- reassuring evidence that the model was already near
+its plateau by epoch 5 and the original 5-epoch numbers weren't an
+undertrained fluke, rather than a sign anything is wrong with early
+stopping. Step 5's map (chained, not standalone) now also carries the real
+street-map background -- `OSM_GEOPACKAGE_PATH` threading through
+`run_pipeline.ipynb`'s own parameters correctly on a genuine run, matching
+the exec()-based check that first caught the gap -- and every cell in all
+six notebooks now round-trips through real execution with its `id` field
+intact (nbformat's `MissingIDFieldWarning` is gone).
+
+Only the Slurm-submitted standalone-notebook path (as opposed to the
+`run_pipeline.ipynb` chain) remains unconfirmed -- worth a first real
+submission before fully trusting it.
 
 ## Development notes
 
@@ -379,6 +402,20 @@ no `geopandas`/`fiona`/GDAL needed, unlike the existing `pyrosm`+
 extract of the `1000_1` run's event area (659 road segments after
 filtering to driving-relevant `highway` tags) and the actual matched
 events -- clean overlay, no change needed to the x-axis tick fix above.
+
+Also: `plot_events_by_type` now crops every subplot to the bounding box of
+the actual matched events (`zoom_to_events`, default on, padded 10% by
+`zoom_padding_frac`) instead of autoscaling to the full street-map/
+simulation extent -- the event scatter used to end up crowded into a small
+corner of an otherwise-empty plot. And `run_pipeline.ipynb` was silently
+dropping `BS_COORDS`/`OSM_GEOPACKAGE_PATH`/`OSM_PBF_PATH` when chaining
+Step 5 -- its own parameters cell never had them, so a real street-map file
+never reached the map even when set as an environment variable, no error
+or warning either. Both fixed and verified together in one genuine
+`jupyter execute run_pipeline.ipynb` run (see "Validation status" above)
+-- that run also confirmed nbformat's `MissingIDFieldWarning` is gone
+after backfilling every cell's missing `id` field across all six
+notebooks (a future-nbformat-version hard error otherwise, harmless today).
 
 **v0.1.0** initial release: rebuilds the five exploratory notebooks listed
 above as this parameterized pipeline. See "Notes on the source notebooks"
