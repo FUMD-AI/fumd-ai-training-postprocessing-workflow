@@ -57,11 +57,41 @@ workflow's own output and needs no GPU.
 | 3 | `step_3_evaluate_model.ipynb` | Evaluate on the run's own validation split (+ a `migration`-state accuracy breakdown), and optionally on other datasets for a cross-run generalization check. | Step 2 output | `metrics_<run_label>.csv`/`.json` | yes (predict-only) |
 | 4 | `step_4_aggregate_training_metrics.ipynb` | Compare Step 3 metrics across runs/variants -- tables and plots. | one or more Step 3 output dirs | `metrics_long.csv`, `metrics_summary.csv`, comparison plots | no |
 | 5 *(optional)* | `step_5_map_migration_events.ipynb` | Plot handover/migration events by type and destination cell over vehicle positions, optionally with real BS coordinates and a street map (a GeoPackage or a `.osm.pbf` extract). | preprocessing's own `dataset_labeled_w<W>.csv` + `events_all_w<W>.csv` | `migration_events_by_type.pdf` | no |
+| 1b *(optional, alternate)* | `step_1b_combine_and_window_datasets.ipynb` | Alternate to Step 1: combine several `dataset_labeled_w<W>.csv` runs into one training set (vehicle ids shifted per source so they can't collide), then window/encode/scale exactly like Step 1. | two or more `dataset_labeled_w<W>.csv` paths (`DATASET_PATHS`, no default) | `windows.npz`, `scaler.joblib`, `label_encoders.joblib`, `run_manifest.json` (same shape as Step 1, in `pipeline_run_combined/` by default) | no |
 
 `run_pipeline.ipynb` chains Steps 1-5 for local/interactive use (see
 "Execution environment" for why it isn't meant for the Slurm-submitted GPU
 steps). Every notebook has a single tagged `parameters` cell and also
 stands on its own.
+
+### Optional: combining datasets for training (Step 1b)
+
+`step_1b_combine_and_window_datasets.ipynb` is a drop-in alternate to Step
+1 for training on *several* preprocessing-workflow runs at once instead of
+just one -- its output (`windows.npz`/`scaler.joblib`/
+`label_encoders.joblib`/`run_manifest.json`) has the exact same shape as
+Step 1's, so Step 2 onward need no changes to consume it. It exists mainly
+to give the model more real handover/migration examples to learn from
+(steady-state rows dominate any single run) -- see the notebook's own
+markdown cell, and `data.load_combined_labeled_dataset`'s docstring, for
+the full reasoning and for how it prevents different runs' independently-
+numbered vehicle ids from colliding when concatenated.
+
+**Deliberately hold out at least one run from `DATASET_PATHS`** -- e.g.
+combine only the `_1` runs and keep `_2`/`_3` back -- and point Step 3's
+existing `CROSS_RUN_DATASET_PATHS` at those held-out runs afterwards, so
+there's still a genuinely unseen run to check generalization against
+(Step 3 needs no changes for this, it already accepts a plain list of
+paths):
+
+```
+DATASET_PATHS='["../datasets/900_1/dataset_labeled_w3.csv","../datasets/1000_1/dataset_labeled_w3.csv","../datasets/1200_1/dataset_labeled_w3.csv"]' \
+jupyter execute notebooks/step_1b_combine_and_window_datasets.ipynb
+```
+
+Not currently chained into `run_pipeline.ipynb` -- it's a standalone
+alternate starting point you run once before Step 2, not a sixth pipeline
+stage.
 
 ## Execution environment
 
@@ -232,6 +262,7 @@ If both are set, `OSM_GEOPACKAGE_PATH` is tried first.
 │       └── notebook_runner.py    minimal parameter-injection + execution (run_pipeline.ipynb only)
 └── notebooks/
     ├── step_1_load_and_window_dataset.ipynb
+    ├── step_1b_combine_and_window_datasets.ipynb   optional alternate to Step 1: combine several runs
     ├── step_2_train_model.ipynb
     ├── step_3_evaluate_model.ipynb
     ├── step_4_aggregate_training_metrics.ipynb
@@ -389,7 +420,22 @@ collapsed/degenerate scores. That's a good sign against overfitting to
 one run's specific road network or traffic pattern, though it's also
 only six runs from what looks like the same underlying simulated area at
 different vehicle counts -- not evidence of generalizing to a
-genuinely different road network or city.
+genuinely different road network or city. It's also currently
+uneven across vehicle-density tiers -- `900_2`/`900_3` weren't available
+as complete runs at the time of this check, so there's no held-out
+coverage for the 900-vehicle tier specifically (only as the `900_1`
+*training* run); once real `900_2`/`900_3` data exists (a `1400`-vehicle
+tier is also expected later), re-running this check against them would
+close that gap.
+
+The new optional `step_1b_combine_and_window_datasets.ipynb` (combines
+several runs into one training set via `data.load_combined_labeled_dataset`,
+shifting each source's vehicle ids so they can't collide) has been
+verified the same exec()-based way against real `900_1`/`1000_1`/`1200_1`
+data -- 900+999+1199=3,098 combined vehicles, zero cross-source id
+collisions, correct per-source counts through encoding/splitting/
+windowing/scaling/saving -- but not yet through a genuine `jupyter
+execute` run, and not yet used for an actual training run.
 
 Neither Slurm submission pattern has been exercised on real Slurm
 infrastructure yet -- the per-step templates (`train_model.sbatch`/
@@ -403,6 +449,15 @@ real cluster; worth confirming with a first real submission (e.g. a
 low-`EPOCHS` run) before relying on it for a real training run.
 
 ## Development notes
+
+**Unreleased:** new optional `notebooks/step_1b_combine_and_window_datasets.ipynb`
+(alternate to Step 1: combines several `dataset_labeled_w<W>.csv` runs into
+one larger training set) and the `data.load_combined_labeled_dataset`
+function backing it -- see "Optional: combining datasets for training
+(Step 1b)" above and "Validation status" for how it was verified. Not yet
+version-bumped/released -- holding off until it's been run for real
+(genuine `jupyter execute`, and an actual multi-run training run) rather
+than only exec()-verified.
 
 **v0.1.2** (2026-08-28): `plot_events_by_type` now crops every subplot to
 the bounding box of the actual matched events (`zoom_to_events`, default

@@ -86,6 +86,9 @@
           "@id": "notebooks/step_1_load_and_window_dataset.ipynb"
         },
         {
+          "@id": "notebooks/step_1b_combine_and_window_datasets.ipynb"
+        },
+        {
           "@id": "notebooks/step_2_train_model.ipynb"
         },
         {
@@ -335,6 +338,65 @@
       "output": [
         {
           "@id": "#param-windowed-run-dir"
+        }
+      ],
+      "softwareRequirements": [
+        {
+          "@id": "src/fumd_training_workflow/data.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/evaluate.py"
+        },
+        {
+          "@id": "src/fumd_training_workflow/metrics_io.py"
+        }
+      ]
+    },
+    {
+      "@id": "notebooks/step_1b_combine_and_window_datasets.ipynb",
+      "@type": [
+        "File",
+        "SoftwareSourceCode",
+        "ComputationalWorkflow"
+      ],
+      "name": "Step 1b (optional, alternate to Step 1): Combine & window multiple datasets",
+      "description": "Alternate entry point to Step 1: loads and concatenates two or more dataset_labeled_w<W>.csv runs into one training set, shifting each source file's veh_id by a distinct offset first so vehicles from different runs (each numbered independently from 0) can never collide, then encodes/splits/windows/scales identically to Step 1. Adds a source_dataset provenance column. Not chained by run_pipeline.ipynb -- run once, standalone, before Step 2, holding at least one run back from DATASET_PATHS for Step 3's CROSS_RUN_DATASET_PATHS generalization check.",
+      "conformsTo": {
+        "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
+      },
+      "programmingLanguage": {
+        "@id": "#jupyter-notebook"
+      },
+      "encodingFormat": "application/x-ipynb+json",
+      "input": [
+        {
+          "@id": "#param-dataset-paths"
+        },
+        {
+          "@id": "#param-id-offset"
+        },
+        {
+          "@id": "#param-feature-columns"
+        },
+        {
+          "@id": "#param-sequence-length"
+        },
+        {
+          "@id": "#param-future-steps"
+        },
+        {
+          "@id": "#param-val-fraction"
+        },
+        {
+          "@id": "#param-random-seed"
+        },
+        {
+          "@id": "#param-step1b-output-dir"
+        }
+      ],
+      "output": [
+        {
+          "@id": "#param-combined-run-dir"
         }
       ],
       "softwareRequirements": [
@@ -619,6 +681,33 @@
       "@type": "FormalParameter",
       "name": "Step 1 run directory contents",
       "description": "windows.npz (train/val sequence arrays), scaler.joblib, label_encoders.joblib, run_manifest.json."
+    },
+    {
+      "@id": "#param-dataset-paths",
+      "@type": "FormalParameter",
+      "name": "DATASET_PATHS",
+      "description": "Two or more dataset_labeled_w<W>.csv paths to combine into one training set (e.g. every \"_1\" run from a set of otherwise-identical scenarios). No default -- must be set.",
+      "defaultValue": "[]"
+    },
+    {
+      "@id": "#param-id-offset",
+      "@type": "FormalParameter",
+      "name": "ID_OFFSET",
+      "description": "Amount each source file's veh_id is shifted by (i * ID_OFFSET, i = the file's position in DATASET_PATHS) before concatenating, so vehicles from different runs can never collide. Raises a clear error if too small for a source file's own max veh_id.",
+      "defaultValue": "1000000"
+    },
+    {
+      "@id": "#param-step1b-output-dir",
+      "@type": "FormalParameter",
+      "name": "OUTPUT_DIR (Step 1b)",
+      "description": "Directory Step 1b writes windows.npz, scaler.joblib, label_encoders.joblib, run_manifest.json into. Distinct from Step 1's own default so the two don't collide if both are run against the same checkout.",
+      "defaultValue": "pipeline_run_combined"
+    },
+    {
+      "@id": "#param-combined-run-dir",
+      "@type": "FormalParameter",
+      "name": "Step 1b run directory contents",
+      "description": "windows.npz (train/val sequence arrays), scaler.joblib, label_encoders.joblib, run_manifest.json (same shape as Step 1's, plus dataset_paths and id_offset)."
     },
     {
       "@id": "#param-input-dir",
