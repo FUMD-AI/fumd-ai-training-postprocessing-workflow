@@ -21,6 +21,15 @@
 #      the cluster's filesystem.
 #   3. Adjust --nodelist (or drop it and let Slurm schedule any GPU node)
 #      and --cpus-per-task for your cluster.
+#   4. This project's Singularity images are run without --contain, so by
+#      default Singularity auto-mounts your host $HOME into the container --
+#      and Python's user-site-packages (~/.local/lib/pythonX.Y/site-packages)
+#      take precedence over the container's own pinned packages, silently
+#      shadowing them if you happen to have anything installed there on the
+#      host. The `--env PYTHONNOUSERSITE=1` below disables that lookup, so
+#      the container always uses its own pinned dependency versions
+#      regardless of what's in your host ~/.local. Leave it in place unless
+#      you have a specific reason to want host packages to take precedence.
 
 #SBATCH --job-name fumd_train_model
 #SBATCH --output logs/train_model_%j.out
@@ -40,5 +49,6 @@ IMAGE=/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif            # built 
 NOTEBOOK=notebooks/step_2_train_model.ipynb
 
 mkdir -p logs
-singularity exec --nv --pwd /workflow --bind "${REPO_DIR}:/workflow" "${IMAGE}" \
+singularity exec --nv --pwd /workflow --env PYTHONNOUSERSITE=1 \
+    --bind "${REPO_DIR}:/workflow" "${IMAGE}" \
     jupyter execute "/workflow/${NOTEBOOK}"

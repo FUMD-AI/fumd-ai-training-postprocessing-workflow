@@ -75,6 +75,13 @@
 #      training), so a queue with a short per-job time limit may need a
 #      raised --time here even if train_model.sbatch/evaluate_model.sbatch
 #      individually fit under the default.
+#   5. --env PYTHONNOUSERSITE=1 below stops your host ~/.local packages
+#      (auto-mounted into the container along with the rest of $HOME, since
+#      none of these templates pass --contain/--no-home) from shadowing the
+#      container's own pinned dependencies via Python's user-site-packages
+#      precedence -- see train_model.sbatch's header comment (point 4) for
+#      the full explanation. Leave it in place unless you have a specific
+#      reason to want host packages to take precedence.
 
 #SBATCH --job-name fumd_run_pipeline
 #SBATCH --output logs/run_pipeline_%j.out
@@ -109,6 +116,7 @@ NOTEBOOK=run_pipeline.ipynb
 
 mkdir -p logs
 singularity exec --nv --pwd /workflow \
+    --env PYTHONNOUSERSITE=1 \
     --bind "${REPO_DIR}:/workflow" \
     --bind "${DATASETS_DIR}:/datasets" \
     "${IMAGE}" \

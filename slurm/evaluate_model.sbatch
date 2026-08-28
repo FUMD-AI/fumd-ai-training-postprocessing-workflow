@@ -21,6 +21,11 @@
 # point CROSS_RUN_DATASET_PATHS entries at /datasets/... accordingly, e.g.
 # '["/datasets/900_1/dataset_labeled_w3.csv"]'. See run_pipeline.sbatch's
 # header comment for the fuller explanation.
+#
+# --env PYTHONNOUSERSITE=1 below stops your host ~/.local packages (auto-
+# mounted into the container along with the rest of $HOME) from shadowing
+# the container's own pinned dependencies -- see train_model.sbatch's
+# header comment (point 4) for the full explanation.
 
 #SBATCH --job-name fumd_evaluate_model
 #SBATCH --output logs/evaluate_model_%j.out
@@ -41,6 +46,7 @@ NOTEBOOK=notebooks/step_3_evaluate_model.ipynb
 
 mkdir -p logs
 singularity exec --nv --pwd /workflow \
+    --env PYTHONNOUSERSITE=1 \
     --bind "${REPO_DIR}:/workflow" \
     --bind "${DATASETS_DIR}:/datasets" \
     "${IMAGE}" \

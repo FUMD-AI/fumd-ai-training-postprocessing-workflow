@@ -192,6 +192,23 @@ see either template's own header comment for worked examples.
 `train_model.sbatch` doesn't need this: Step 2 alone only takes `INPUT_DIR`/
 `OUTPUT_DIR` (Step 1's windowed output, not a raw dataset file).
 
+All three templates also pass `--env PYTHONNOUSERSITE=1` to `singularity
+exec`. None of them pass `--contain`/`--no-home`, so Singularity auto-mounts
+the submitting user's host `$HOME` into the container by default (needed
+for things like SSH config on some clusters) -- but Python's own
+user-site-packages mechanism (`~/.local/lib/pythonX.Y/site-packages`) takes
+precedence over a container's system site-packages, so without this flag
+anything a user happens to have `pip install --user`-ed on the host can
+silently shadow this project's pinned `requirements/train.txt`/
+`requirements/postprocess.txt` versions inside the container -- this is
+exactly what caused a real `jupyter_client`/`typing_extensions` version
+mismatch (a `TypedDict... extra_items` `TypeError` at `jupyter execute`
+startup) the first time this pipeline was run on real Slurm infrastructure.
+`PYTHONNOUSERSITE=1` disables the user-site lookup entirely, so the
+container always uses its own pinned packages regardless of what's on the
+host, while leaving the rest of `$HOME`'s auto-mount (and the environment-
+variable forwarding described below) untouched.
+
 `jupyter execute` is `nbclient`'s own CLI -- it has no
 `-p NAME VALUE`-style parameter-injection flag the way `papermill` does, so
 a run is configured one of two ways:
@@ -671,6 +688,23 @@ accuracy number matched the prior verification run exactly (deterministic
 given `RANDOM_SEED=42`), confirming the new orchestration code didn't
 change any model behavior -- only added the missing steps. See "Validation
 status" below for the full numbers.
+
+Two more fixes came out of the first real submissions on actual Slurm
+infrastructure, both in `slurm/*.sbatch`: `run_pipeline.sbatch`/
+`evaluate_model.sbatch` now bind a separate `DATASETS_DIR` host directory
+into the container at `/datasets`, since a relative `../datasets/...` path
+(this project's own convention for keeping datasets outside the repo
+checkout) doesn't resolve from inside a container whose only bind is the
+repo itself -- Singularity's `--bind` only exposes the exact directory you
+name, not its parent; and all three templates now pass `--env
+PYTHONNOUSERSITE=1` to `singularity exec`, after a real run hit a
+`jupyter_client`/`typing_extensions` version mismatch
+(`TypedDict... extra_items` `TypeError` at `jupyter execute` startup)
+caused by the submitting user's host `~/.local` packages -- auto-mounted
+into the container along with the rest of `$HOME` -- silently shadowing
+this project's pinned dependencies via Python's user-site-packages
+precedence. See "Execution environment" above for the full explanation of
+both.
 
 **v0.1.2** (2026-08-28): `plot_events_by_type` now crops every subplot to
 the bounding box of the actual matched events (`zoom_to_events`, default
