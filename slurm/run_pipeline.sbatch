@@ -36,7 +36,13 @@
 #      env_override() and run_step() docstrings -- run_step() also
 #      temporarily unsets each parameter it explicitly injects so an
 #      ambient env var like OUTPUT_DIR can't leak into a child step's own
-#      differently-scoped parameter of the same name).
+#      differently-scoped parameter of the same name). Optionally also set
+#      COMBINE_DATASET_PATHS (and COMBINE_OUTPUT_DIR/COMBINE_ID_OFFSET/
+#      COMBINE_CROSS_RUN_DATASET_PATHS) to additionally run Step 1b's
+#      combine-multiple-datasets track as a second, independent model in
+#      this same job -- see README's "Optional: combining datasets for
+#      training (Step 1b)" section; left unset (the default), this track
+#      is skipped entirely.
 #   2. IMAGE below already points at the built .sif on this cluster
 #      (matching the pinned requirements/train.txt environment; Step 5's
 #      own deps -- pandas/numpy/matplotlib -- are already in that image

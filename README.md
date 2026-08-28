@@ -89,9 +89,34 @@ DATASET_PATHS='["../datasets/900_1/dataset_labeled_w3.csv","../datasets/1000_1/d
 jupyter execute notebooks/step_1b_combine_and_window_datasets.ipynb
 ```
 
-Not currently chained into `run_pipeline.ipynb` -- it's a standalone
-alternate starting point you run once before Step 2, not a sixth pipeline
-stage.
+Also chainable directly from `run_pipeline.ipynb` in the same call as the
+main Steps 1-5 run, as a second, independent track -- set `COMBINE_DATASET_PATHS`
+(and, to also evaluate the combined model, `COMBINE_CROSS_RUN_DATASET_PATHS`)
+alongside that run's own parameters:
+
+```
+DATASET_PATH=../datasets/1000_2/dataset_labeled_w3.csv \
+EVENTS_CSV_PATH=../datasets/1000_2/events_all_w3.csv \
+OUTPUT_DIR=pipeline_run_1000_2 \
+EPOCHS=50 \
+CROSS_RUN_DATASET_PATHS='["../datasets/900_1/dataset_labeled_w3.csv","../datasets/1000_1/dataset_labeled_w3.csv","../datasets/1000_3/dataset_labeled_w3.csv","../datasets/1200_1/dataset_labeled_w3.csv","../datasets/1200_2/dataset_labeled_w3.csv","../datasets/1200_3/dataset_labeled_w3.csv"]' \
+COMBINE_DATASET_PATHS='["../datasets/900_1/dataset_labeled_w3.csv","../datasets/1000_1/dataset_labeled_w3.csv","../datasets/1200_1/dataset_labeled_w3.csv"]' \
+COMBINE_OUTPUT_DIR=pipeline_run_combined \
+COMBINE_CROSS_RUN_DATASET_PATHS='["../datasets/1000_2/dataset_labeled_w3.csv","../datasets/1000_3/dataset_labeled_w3.csv","../datasets/1200_2/dataset_labeled_w3.csv","../datasets/1200_3/dataset_labeled_w3.csv"]' \
+jupyter execute run_pipeline.ipynb
+```
+
+This trains and evaluates *two* independent models in one call -- the main
+run's model (on `DATASET_PATH` alone, under `OUTPUT_DIR`) and the combined
+model (on `COMBINE_DATASET_PATHS`, under `COMBINE_OUTPUT_DIR`) -- plus the
+main run's migration map (Step 5, since `EVENTS_CSV_PATH` is set). The
+combined track only runs Step 1b -> Step 2 -> Step 3 -- Step 4 (metrics
+comparison) and Step 5 (one run's own event map) aren't meaningful for a
+multi-run combined dataset, so run Step 4 by hand against
+`COMBINE_OUTPUT_DIR` afterwards if you want that comparison. Set
+`COMBINE_DATASET_PATHS = []` (the default) to skip this whole track and
+run only the main Steps 1-5 chain, same as before this was added. Also
+still runnable standalone, one step at a time, exactly as above.
 
 ## Execution environment
 
