@@ -561,21 +561,37 @@ in every case. That's the first direct evidence in this workflow that
 training on combined runs helps generalization, not just adds more of the
 same data.
 
-That run predates two further changes to the combined track, made once the
+That run predated two further changes to the combined track, made once the
 gap was noticed (see "Optional: combining datasets for training (Step 1b)"
 above): Step 4 (metrics comparison) and Step 5 (one migration map per source
 run in `COMBINE_DATASET_PATHS`, via the new `migration_map.derive_events_path`
-helper) are now chained after Step 3, and Step 3 itself now always runs
+helper) chained after Step 3, and Step 3 itself made to always run
 (previously it was skipped entirely -- along with the combined model's own
 `metrics_train_val.json` -- whenever `COMBINE_CROSS_RUN_DATASET_PATHS` was
 left empty; the real run above happened to set it, so this bug was latent
-rather than triggered there). All three changes have been checked statically
--- `nr.run_step` parameter names verified against each target notebook's
-own parameters cell, no undefined-variable paths across the notebook's
-cells, `derive_events_path`/`run_label` logic replayed against the real
-`900_1`/`1000_1`/`1200_1` paths (correct `events_all_w3.csv` paths
-resolved, all three files exist) -- but not yet exercised by an actual
-`jupyter execute run_pipeline.ipynb` run.
+rather than triggered there). All three changes have since been confirmed
+for real too: a second full `jupyter execute run_pipeline.ipynb` run, same
+parameters as above (main track against `1000_2`, combined track against
+`900_1`/`1000_1`/`1200_1`, both with their cross-run checks), zero errors
+across all twelve executed notebooks -- the main track's five, plus the
+combined track's Step 1b/2/3/4 and three per-source Step 5 maps
+(`pipeline_run_combined/migration_maps/900_1/`, `.../1000_1/`,
+`.../1200_1/`). Every window count, epoch count, and accuracy number
+matched the first run exactly (deterministic given `RANDOM_SEED=42`),
+confirming the new Step 4/5 chaining and the Step 3 fix didn't change any
+model behavior -- only added the missing outputs. `metrics_comparison/`
+under `pipeline_run_combined/` now has the same three comparison plots +
+summary/long CSVs the main track's Step 4 always produced, and each
+per-source map shows the correct BS rings and C2b/C3 pattern, same as the
+main track's own map.
+
+This same run also confirmed `migration_map.ALICANTE_BS_COORDS`'s new
+CSV-backed loading (`load_bs_coords_from_csv` reading
+`example-data/alicante_bs_coords.csv`, see "Notes on the source notebooks"
+above): both the main track's map (against `1000_2`) and the combined
+track's three per-source maps show BS rings in the identical positions as
+before this change, confirming the CSV round-trips to the exact same 9
+sites as the old Python literal did.
 
 Neither Slurm submission pattern has been exercised on real Slurm
 infrastructure yet -- the per-step templates (`train_model.sbatch`/
@@ -590,67 +606,48 @@ low-`EPOCHS` run) before relying on it for a real training run.
 
 ## Development notes
 
-**Unreleased:** new optional `notebooks/step_1b_combine_and_window_datasets.ipynb`
-(alternate to Step 1: combines several `dataset_labeled_w<W>.csv` runs into
-one larger training set) and the `data.load_combined_labeled_dataset`
-function backing it -- see "Optional: combining datasets for training
-(Step 1b)" above and "Validation status" for how it was verified,
-including a genuine `jupyter execute` run against real `900_1`/`1000_1`/
-`1200_1` data (zero errors, results matching the earlier exec()-based
-check exactly).
+**v0.1.3** (2026-08-28): new optional
+`notebooks/step_1b_combine_and_window_datasets.ipynb` (alternate to Step 1:
+combines several `dataset_labeled_w<W>.csv` runs into one larger training
+set, via the new `data.load_combined_labeled_dataset`) and, chained onto it,
+a full second track inside `run_pipeline.ipynb` -- Step 1b -> 2 -> 3 -> 4 -> 5
+-- that trains and evaluates an independent "combined" model alongside the
+main run in the same call (`COMBINE_DATASET_PATHS`/`COMBINE_OUTPUT_DIR`/
+`COMBINE_ID_OFFSET`/`COMBINE_CROSS_RUN_DATASET_PATHS`; empty/default skips
+it entirely). Step 5 for this track maps each *source* run in
+`COMBINE_DATASET_PATHS` individually (via the new
+`migration_map.derive_events_path`), since there's no single coherent
+"combined" positions/events dataset to map. Also fixed a real bug found
+while wiring Step 4/5 in: Step 3 -- and therefore the combined model's own
+held-out metrics -- used to be skipped entirely whenever
+`COMBINE_CROSS_RUN_DATASET_PATHS` was left empty; it's now unconditional,
+matching the main track. See "Optional: combining datasets for training
+(Step 1b)" above for the full behavior and examples.
 
-**Unreleased (continued):** fixed the swapped C2b/C3 event-case labels
+Also this release: fixed the swapped C2b/C3 event-case labels
 (`migration_map.add_case_short`) and added `migration_map.ALICANTE_BS_COORDS`
 as Step 5's/`run_pipeline.ipynb`'s default `BS_COORDS`, so migration maps
-show base-station markers out of the box instead of only when the caller
-supplies their own coordinate dict -- see "Notes on the source notebooks"
-above for both, and "Validation status" for the genuine `jupyter execute`
-run confirming both together against real data.
+show base-station markers out of the box; that coordinate data is now
+loaded from a bundled, citable file (`example-data/alicante_bs_coords.csv`,
+via the new `migration_map.load_bs_coords_from_csv`) instead of being an
+anonymous Python literal, closing a real FAIR-packaging gap (also listed in
+`ro-crate-metadata.json`) -- see "Notes on the source notebooks" above for
+both. `slurm/train_model.sbatch`/`evaluate_model.sbatch`/`run_pipeline.sbatch`
+now default `IMAGE` to this project's actual built `.sif` path on the
+cluster instead of a bare filename placeholder.
 
-**Unreleased (continued):** `run_pipeline.ipynb` can now also chain Step
-1b's combined-dataset track (Step 1b -> Step 2 -> Step 3, a second
-independent model) in the same call as the main Steps 1-5 run -- see
-"Optional: combining datasets for training (Step 1b)" above for the full
-example, and "Validation status" for the genuine `jupyter execute
-run_pipeline.ipynb` run confirming it, together with the main track, for
-the first time.
-
-**Unreleased (continued):** `slurm/train_model.sbatch`/`evaluate_model.sbatch`/
-`run_pipeline.sbatch` now default `IMAGE` to this project's actual built
-`.sif` path on the cluster (`/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif`)
-instead of a bare filename placeholder.
-
-**Unreleased (continued):** the combined-dataset track now also chains Step
-4 (metrics comparison, across whatever `metrics_*.json` Step 3 wrote) and
-Step 5 (one migration map per source run in `COMBINE_DATASET_PATHS`, via
-the new `migration_map.derive_events_path` helper that finds each source's
-own `events_all_w<W>.csv` automatically) -- previously this track stopped
-after Step 3, with no way to see the combined model's metrics charts or any
-migration maps without running those steps by hand. Also fixed a real bug
-found along the way: Step 3 (and therefore the combined model's own
-`metrics_train_val.json`) used to be skipped entirely whenever
-`COMBINE_CROSS_RUN_DATASET_PATHS` was left empty -- it's now unconditional,
-matching the main track's Step 3, which always evaluates the model's own
-held-out split regardless of whether a cross-run check is also requested.
-See "Optional: combining datasets for training (Step 1b)" above for the
-full behavior and "Validation status" for what's been verified so far
-(checked statically and against real file paths; not yet run for real).
-
-**Unreleased (continued):** `migration_map.ALICANTE_BS_COORDS` is now loaded
-from a bundled CSV (`example-data/alicante_bs_coords.csv`, via the new
-`migration_map.load_bs_coords_from_csv`) instead of being a Python dict
-literal, and is now also listed as its own File node in
-`ro-crate-metadata.json` -- a FAIR-packaging gap: this coordinate data was
-being shipped with the repository (as Step 5's/`run_pipeline.ipynb`'s
-default `BS_COORDS`) without being independently findable/citable as data,
-only readable by importing Python source. No behavior change --
-`ALICANTE_BS_COORDS` still resolves to the exact same 9 sites (verified by
-loading the real module and comparing against the prior literal). See
-"Notes on the source notebooks" above for the full reasoning, including why
-this doesn't (and can't) make adapting to a different simulated area fully
-automatic -- there's still no way to derive a simulation cell id's
-real-world site without domain knowledge, only a documented, reusable shape
-(`cell_id,name,lon,lat`) to supply it in.
+All of the above -- including the combined-dataset track's Step 4/5
+chaining, the Step 3 fix, and the CSV-based `ALICANTE_BS_COORDS` loading --
+has now been confirmed by a single genuine `jupyter execute
+run_pipeline.ipynb` run chaining both tracks together (main track against
+`1000_2`, combined track against `900_1`+`1000_1`+`1200_1`, both with cross-
+run generalization checks): zero errors across all twelve executed
+notebooks (the main track's five, plus the combined track's Step 1b/2/3/4
+and three per-source Step 5 maps). Window counts, epoch counts, and every
+accuracy number matched the prior verification run exactly (deterministic
+given `RANDOM_SEED=42`), confirming the new orchestration code didn't
+change any model behavior -- only added the missing steps. See "Validation
+status" below for the full numbers.
 
 **v0.1.2** (2026-08-28): `plot_events_by_type` now crops every subplot to
 the bounding box of the actual matched events (`zoom_to_events`, default
