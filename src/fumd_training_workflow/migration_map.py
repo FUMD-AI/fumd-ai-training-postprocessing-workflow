@@ -89,6 +89,38 @@ ALICANTE_BS_COORDS: dict[int, tuple[float, float]] = {
 }
 
 
+def derive_events_path(dataset_path: str) -> str:
+    """
+    Given a `dataset_labeled_w<W>.csv` path, return the matching
+    `events_all_w<W>.csv` path in the same directory -- the naming
+    convention the FUMD-AI preprocessing workflow always pairs the two
+    files under (same directory, same window size `W`).
+
+    Used by `run_pipeline.ipynb`'s combined-dataset track to find each
+    source run's own events file for its per-source migration map, without
+    also having to list events paths by hand alongside
+    `COMBINE_DATASET_PATHS` (positions and events for a single run are
+    never spread across different directories in this project's data
+    layout, so the derivation is unambiguous).
+
+    Raises ValueError if `dataset_path`'s filename doesn't match the
+    `dataset_labeled_w<W>.csv` pattern -- call sites that may see
+    non-conforming filenames should catch this and fall back to asking the
+    caller for an explicit events path instead of guessing one.
+    """
+    directory, filename = os.path.split(dataset_path)
+    m = re.fullmatch(r"dataset_labeled_(w\d+)\.csv", filename)
+    if not m:
+        raise ValueError(
+            f"derive_events_path: {filename!r} doesn't match the expected "
+            "'dataset_labeled_w<W>.csv' naming convention, so the matching "
+            "events_all_w<W>.csv path can't be derived automatically -- "
+            "pass an explicit events path instead."
+        )
+    events_filename = f"events_all_{m.group(1)}.csv"
+    return os.path.join(directory, events_filename) if directory else events_filename
+
+
 def _read_wkb_geometry(buf: bytes, offset: int = 0) -> tuple[list[list[tuple[float, float]]], int]:
     """Parse one standard ISO WKB geometry starting at `offset` in `buf`.
     Only LineString (type 2) and MultiLineString (type 5) are supported --

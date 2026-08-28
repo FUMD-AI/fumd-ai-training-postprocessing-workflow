@@ -109,15 +109,28 @@ jupyter execute run_pipeline.ipynb
 
 This trains and evaluates *two* independent models in one call -- the main
 run's model (on `DATASET_PATH` alone, under `OUTPUT_DIR`) and the combined
-model (on `COMBINE_DATASET_PATHS`, under `COMBINE_OUTPUT_DIR`) -- plus the
-main run's migration map (Step 5, since `EVENTS_CSV_PATH` is set). The
-combined track only runs Step 1b -> Step 2 -> Step 3 -- Step 4 (metrics
-comparison) and Step 5 (one run's own event map) aren't meaningful for a
-multi-run combined dataset, so run Step 4 by hand against
-`COMBINE_OUTPUT_DIR` afterwards if you want that comparison. Set
-`COMBINE_DATASET_PATHS = []` (the default) to skip this whole track and
-run only the main Steps 1-5 chain, same as before this was added. Also
-still runnable standalone, one step at a time, exactly as above.
+model (on `COMBINE_DATASET_PATHS`, under `COMBINE_OUTPUT_DIR`) -- plus maps
+for both: the main run's migration map (Step 5, since `EVENTS_CSV_PATH` is
+set) and, for the combined track, one migration map *per source run* that
+went into `COMBINE_DATASET_PATHS`. The combined track runs Step 1b -> Step
+2 -> Step 3 -> Step 4 (metrics comparison across whatever `metrics_*.json`
+Step 3 wrote -- train_val plus any `COMBINE_CROSS_RUN_DATASET_PATHS`) just
+like the main track does, under `COMBINE_OUTPUT_DIR`/`metrics_comparison/`.
+Step 5 is different for this track: there's no single coherent "combined"
+positions/events dataset to map (the source runs' vehicle ids were only
+shifted to avoid training collisions, not merged into one consistent
+simulation), so instead it maps each source dataset in
+`COMBINE_DATASET_PATHS` on its own -- under
+`COMBINE_OUTPUT_DIR/migration_maps/<run_label>/`, `run_label` being the
+source's containing directory name (e.g. `900_1`), reusing the main run's
+`BS_COORDS`/`OSM_GEOPACKAGE_PATH`/`OSM_PBF_PATH` overlays and each source's
+own `events_all_w<W>.csv` (found automatically next to its
+`dataset_labeled_w<W>.csv` via `migration_map.derive_events_path` -- a
+source missing its events file has just its own map skipped, not the whole
+pipeline). Set `COMBINE_DATASET_PATHS = []` (the default) to skip this
+whole track and run only the main Steps 1-5 chain, same as before this was
+added. Also still runnable standalone, one step at a time, exactly as
+above.
 
 ## Execution environment
 
@@ -487,8 +500,8 @@ default. `EarlyStopping` behaved as expected: `run_manifest.json` records
 `restore_best_weights=True` reloads the epoch-3 checkpoint). Per-output
 accuracy at the final logged epoch runs 96.0% (val) at +1s down to 93.0%
 at +7s -- the same degradation shape from +1s to +7s as the earlier
-single-run (`1200_1`) baseline. Not yet evaluated through Step 3 against
-its own held-out split or any cross-run generalization check.
+single-run (`1200_1`) baseline. Step 3 has since evaluated this model too
+-- see below.
 
 The C2b/C3 case-label swap and the `ALICANTE_BS_COORDS` default (see
 "Notes on the source notebooks" above) have also both been confirmed by a
@@ -499,16 +512,54 @@ and the resulting `migration_events_by_type.pdf` matches
 places/colors, C2b denser than C3 as expected for ABA vs. no-prior-history
 events).
 
-`run_pipeline.ipynb`'s new optional combined-dataset track
+`run_pipeline.ipynb`'s combined-dataset track
 (`COMBINE_DATASET_PATHS`/`COMBINE_OUTPUT_DIR`/`COMBINE_ID_OFFSET`/
-`COMBINE_CROSS_RUN_DATASET_PATHS`, chaining Step 1b -> Step 2 -> Step 3 as
-a second model alongside the main run) has been checked statically --
-every `nr.run_step` call's injected parameter names verified to exist in
-its target notebook's own parameters cell, no undefined-variable paths
-across the notebook's cells, Step 1b's own combine logic re-verified
-end-to-end through the exact same `inject_parameters` mechanism
-`run_pipeline.ipynb` uses -- but not yet run for real as part of an actual
-`jupyter execute run_pipeline.ipynb` invocation.
+`COMBINE_CROSS_RUN_DATASET_PATHS`) has since been run for real -- and for
+the first time together with the main track in one invocation: a single
+`jupyter execute run_pipeline.ipynb` call with `DATASET_PATH` pointing at
+`1000_2` (main Steps 1-5 track, `OSM_GEOPACKAGE_PATH` set) and
+`COMBINE_DATASET_PATHS` set to `900_1`/`1000_1`/`1200_1` (combined track,
+with its own `COMBINE_CROSS_RUN_DATASET_PATHS`) -- zero errors across all
+eight executed notebooks (the main track's five plus the combined track's
+Step 1b/2/3). This also exercises `notebook_runner.run_step`'s env-var
+pop/restore behavior for real: both tracks set same-named parameters
+(`OUTPUT_DIR`, `CROSS_RUN_DATASET_PATHS`) to different values in the same
+process, and neither leaked into the other.
+
+The main-track model (trained on `1000_2` alone -- 70,922 train / 16,860 val
+windows, `epochs_run: 10`) scored 93.9% train/val accuracy overall (95.2% at
++1s, 92.5% at +7s), with the same steady-state-vs-warning-window split seen
+in earlier runs (97.3% vs. 70.0%), and generalized to the six other full
+preprocessing runs (`900_1`, `1000_1`, `1000_3`, `1200_1`, `1200_2`,
+`1200_3`) at 93.0%-94.4% accuracy -- consistent with its own held-out split,
+no outliers. `migration_events_by_type.pdf` (Step 5, this time against
+`1000_2`) again shows the C2b/C3 fix and BS-coordinate rings correctly.
+
+The combined-track model (trained on `900_1`+`1000_1`+`1200_1` --
+223,410 train / 55,323 val windows, `epochs_run: 6`, matching the earlier
+standalone Step 1b run's window counts exactly) scored higher across the
+board: 95.1% train/val accuracy (96.3% at +1s, 93.7% at +7s), and
+94.9%-95.1% on the four runs it never trained on (`1000_2`, `1000_3`,
+`1200_2`, `1200_3`) -- a bit above the single-run model's equivalent numbers
+in every case. That's the first direct evidence in this workflow that
+training on combined runs helps generalization, not just adds more of the
+same data.
+
+That run predates two further changes to the combined track, made once the
+gap was noticed (see "Optional: combining datasets for training (Step 1b)"
+above): Step 4 (metrics comparison) and Step 5 (one migration map per source
+run in `COMBINE_DATASET_PATHS`, via the new `migration_map.derive_events_path`
+helper) are now chained after Step 3, and Step 3 itself now always runs
+(previously it was skipped entirely -- along with the combined model's own
+`metrics_train_val.json` -- whenever `COMBINE_CROSS_RUN_DATASET_PATHS` was
+left empty; the real run above happened to set it, so this bug was latent
+rather than triggered there). All three changes have been checked statically
+-- `nr.run_step` parameter names verified against each target notebook's
+own parameters cell, no undefined-variable paths across the notebook's
+cells, `derive_events_path`/`run_label` logic replayed against the real
+`900_1`/`1000_1`/`1200_1` paths (correct `events_all_w3.csv` paths
+resolved, all three files exist) -- but not yet exercised by an actual
+`jupyter execute run_pipeline.ipynb` run.
 
 Neither Slurm submission pattern has been exercised on real Slurm
 infrastructure yet -- the per-step templates (`train_model.sbatch`/
@@ -544,13 +595,30 @@ run confirming both together against real data.
 1b's combined-dataset track (Step 1b -> Step 2 -> Step 3, a second
 independent model) in the same call as the main Steps 1-5 run -- see
 "Optional: combining datasets for training (Step 1b)" above for the full
-example, and "Validation status" for what's been verified so far (static
-checks only; not yet run for real).
+example, and "Validation status" for the genuine `jupyter execute
+run_pipeline.ipynb` run confirming it, together with the main track, for
+the first time.
 
 **Unreleased (continued):** `slurm/train_model.sbatch`/`evaluate_model.sbatch`/
 `run_pipeline.sbatch` now default `IMAGE` to this project's actual built
 `.sif` path on the cluster (`/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif`)
 instead of a bare filename placeholder.
+
+**Unreleased (continued):** the combined-dataset track now also chains Step
+4 (metrics comparison, across whatever `metrics_*.json` Step 3 wrote) and
+Step 5 (one migration map per source run in `COMBINE_DATASET_PATHS`, via
+the new `migration_map.derive_events_path` helper that finds each source's
+own `events_all_w<W>.csv` automatically) -- previously this track stopped
+after Step 3, with no way to see the combined model's metrics charts or any
+migration maps without running those steps by hand. Also fixed a real bug
+found along the way: Step 3 (and therefore the combined model's own
+`metrics_train_val.json`) used to be skipped entirely whenever
+`COMBINE_CROSS_RUN_DATASET_PATHS` was left empty -- it's now unconditional,
+matching the main track's Step 3, which always evaluates the model's own
+held-out split regardless of whether a cross-run check is also requested.
+See "Optional: combining datasets for training (Step 1b)" above for the
+full behavior and "Validation status" for what's been verified so far
+(checked statically and against real file paths; not yet run for real).
 
 **v0.1.2** (2026-08-28): `plot_events_by_type` now crops every subplot to
 the bounding box of the actual matched events (`zoom_to_events`, default
