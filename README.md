@@ -430,12 +430,17 @@ close that gap.
 
 The new optional `step_1b_combine_and_window_datasets.ipynb` (combines
 several runs into one training set via `data.load_combined_labeled_dataset`,
-shifting each source's vehicle ids so they can't collide) has been
-verified the same exec()-based way against real `900_1`/`1000_1`/`1200_1`
+shifting each source's vehicle ids so they can't collide) was first
+verified the exec()-based way against real `900_1`/`1000_1`/`1200_1`
 data -- 900+999+1199=3,098 combined vehicles, zero cross-source id
 collisions, correct per-source counts through encoding/splitting/
-windowing/scaling/saving -- but not yet through a genuine `jupyter
-execute` run, and not yet used for an actual training run.
+windowing/scaling/saving -- and has since also been run for real
+(`jupyter execute notebooks/step_1b_combine_and_window_datasets.ipynb`
+against the same three runs), zero errors. `run_manifest.json` from that
+real run reports 223,410 train windows and 55,323 val windows -- an exact
+match to the earlier exec()-based check, confirming the two runs agree
+(deterministic given `RANDOM_SEED=42`). Not yet used for an actual model
+training run against the combined output.
 
 Neither Slurm submission pattern has been exercised on real Slurm
 infrastructure yet -- the per-step templates (`train_model.sbatch`/
@@ -454,10 +459,10 @@ low-`EPOCHS` run) before relying on it for a real training run.
 (alternate to Step 1: combines several `dataset_labeled_w<W>.csv` runs into
 one larger training set) and the `data.load_combined_labeled_dataset`
 function backing it -- see "Optional: combining datasets for training
-(Step 1b)" above and "Validation status" for how it was verified. Not yet
-version-bumped/released -- holding off until it's been run for real
-(genuine `jupyter execute`, and an actual multi-run training run) rather
-than only exec()-verified.
+(Step 1b)" above and "Validation status" for how it was verified,
+including a genuine `jupyter execute` run against real `900_1`/`1000_1`/
+`1200_1` data (zero errors, results matching the earlier exec()-based
+check exactly).
 
 **v0.1.2** (2026-08-28): `plot_events_by_type` now crops every subplot to
 the bounding box of the actual matched events (`zoom_to_events`, default
