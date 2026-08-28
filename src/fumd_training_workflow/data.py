@@ -45,6 +45,8 @@ Three column groups are deliberately kept OUT of the model's input features:
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
@@ -102,6 +104,70 @@ def load_labeled_dataset(path: str) -> pd.DataFrame:
     leaked = [c for c in LEAD_LEAKAGE_COLUMNS if c in DEFAULT_FEATURE_COLUMNS]
     assert not leaked, f"lead/future columns must never be features: {leaked}"
     return df.sort_values([GROUP_COLUMN, TIME_COLUMN]).reset_index(drop=True)
+
+
+def load_combined_labeled_dataset(
+    paths: list[str],
+    *,
+    id_offset: int = 1_000_000,
+) -> pd.DataFrame:
+    """
+    Load and concatenate several `dataset_labeled_w<W>.csv` files -- each
+    from a different preprocessing-workflow run -- into one combined
+    DataFrame for multi-run training (see notebooks/
+    step_1b_combine_and_window_datasets.ipynb).
+
+    Different runs number their vehicles independently starting from 0
+    (confirmed across every run this project has: e.g. `1000_1` and
+    `1200_1` both have veh_id 0..N), so naively concatenating would make
+    `split_vehicles`/`build_sequences`/every other `GROUP_COLUMN`-grouped
+    function in this module treat two *different* vehicles from two
+    *different* runs that happen to share an id as one continuous vehicle
+    -- silently building sliding windows across that false boundary
+    (jumping between two unrelated trajectories) instead of raising or
+    warning. Each source file's `veh_id` is shifted by `i * id_offset`
+    (`i` = its position in `paths`, 0-indexed) before concatenating, so no
+    two source files' ranges can ever overlap; raises if any file's own
+    max `veh_id` is not comfortably inside its own offset slot (i.e.
+    `id_offset` is too small for how many vehicles a single run has --
+    the default comfortably covers any realistic SUMO run).
+
+    Adds a `source_dataset` column (each path's containing directory name,
+    e.g. `"1000_1"` -- the same convention Step 3's cross-run evaluation
+    already uses for `run_label`, falling back to the filename stem if the
+    path has no parent directory to use) for provenance/debugging. Every
+    other function in this module ignores columns it doesn't know about,
+    so this doesn't need to be stripped before passing the result on to
+    `ensure_one_row_per_vehicle_second`/`fit_label_encoders`/
+    `split_vehicles`/`build_sequences` exactly as `load_labeled_dataset`'s
+    single-file output already is.
+    """
+    if len(paths) < 2:
+        raise ValueError(f"load_combined_labeled_dataset needs at least 2 paths, got {len(paths)}")
+
+    frames = []
+    for i, path in enumerate(paths):
+        df = load_labeled_dataset(path)  # schema-validates + sorts each file on its own first
+        max_id = int(df[GROUP_COLUMN].max())
+        if max_id >= id_offset:
+            raise ValueError(
+                f"{path}: max {GROUP_COLUMN} is {max_id}, >= id_offset ({id_offset}) -- "
+                "raise id_offset so shifted veh_id ranges can't collide with the next file's"
+            )
+        label = os.path.basename(os.path.dirname(os.path.abspath(path))) \
+            or os.path.splitext(os.path.basename(path))[0]
+        df = df.copy()
+        df["source_dataset"] = label
+        df[GROUP_COLUMN] = df[GROUP_COLUMN].round().astype("int64") + i * id_offset
+        print(f"load_combined_labeled_dataset: {path} (source_dataset={label!r}) -> "
+              f"{df.shape[0]} rows, {df[GROUP_COLUMN].nunique()} vehicles, veh_id offset +{i * id_offset}")
+        frames.append(df)
+
+    combined = pd.concat(frames, ignore_index=True)
+    combined = combined.sort_values([GROUP_COLUMN, TIME_COLUMN]).reset_index(drop=True)
+    print(f"load_combined_labeled_dataset: combined {len(paths)} datasets -> "
+          f"{combined.shape[0]} rows, {combined[GROUP_COLUMN].nunique()} vehicles total")
+    return combined
 
 
 def ensure_one_row_per_vehicle_second(
