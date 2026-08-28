@@ -35,7 +35,7 @@
 #SBATCH --nodelist=gpgpu01
 
 REPO_DIR=.
-DATASETS_DIR=../datasets                # sibling datasets/ folder -- see header comment above; adjust if yours lives elsewhere
+DATASETS_DIR=/home/hpc/users/sonja.filiposka/resources/datasets    # this cluster's actual datasets location -- see header comment above; adjust if yours lives elsewhere
 IMAGE=/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif
 
 # Optional: override this run's parameters (see train_model.sbatch):

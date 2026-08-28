@@ -53,22 +53,24 @@
 #      on the source notebooks" for why pyrosm was never straightforward
 #      to install). Update IMAGE if that path changes, and point REPO_DIR
 #      at this repository's root on the cluster's filesystem.
-#   3. Point DATASETS_DIR at wherever your dataset_labeled_w<W>.csv /
-#      events_all_w<W>.csv files live -- this project's own convention
-#      (see README) is a `datasets/` folder as a SIBLING of this repo's
-#      checkout, matching the default below. This is bound into the
-#      container separately from REPO_DIR and deliberately NOT just
-#      referenced as "../datasets" from inside it: Singularity's --bind
-#      only exposes the exact directory you name (REPO_DIR -> /workflow
-#      here), not its parent, so a relative "../..." path from /workflow
-#      would resolve outside anything actually mounted into the container
-#      and fail, even though the same relative path works fine locally
-#      (not inside a container) or on a cluster whose Singularity config
-#      happens to auto-bind the wider filesystem -- don't rely on that.
-#      DATASET_PATH/EVENTS_CSV_PATH/CROSS_RUN_DATASET_PATHS/
-#      COMBINE_DATASET_PATHS/COMBINE_CROSS_RUN_DATASET_PATHS below all use
-#      the in-container /datasets/... path this mount creates, not the
-#      host path.
+#   3. Point DATASETS_DIR (below) at wherever your dataset_labeled_w<W>.csv /
+#      events_all_w<W>.csv files actually live on this cluster -- it can be
+#      any absolute path, or a path relative to wherever you run `sbatch`
+#      from (this project's own convention, see README, is a `datasets/`
+#      folder as a sibling of the repo checkout; the default below instead
+#      points straight at this cluster's real location). It's bound into
+#      the container separately from REPO_DIR and deliberately NOT just
+#      referenced as a relative "../..." path from inside /workflow:
+#      Singularity's --bind only exposes the exact directory you name
+#      (REPO_DIR -> /workflow here), not its parent, so a relative path
+#      from /workflow would resolve outside anything actually mounted into
+#      the container and fail, even though the identical relative path
+#      works fine locally (not inside a container) or on a cluster whose
+#      Singularity config happens to auto-bind the wider filesystem --
+#      don't rely on that. DATASET_PATH/EVENTS_CSV_PATH/
+#      CROSS_RUN_DATASET_PATHS/COMBINE_DATASET_PATHS/
+#      COMBINE_CROSS_RUN_DATASET_PATHS below all use the in-container
+#      /datasets/... path this mount creates, not the host path.
 #   4. Adjust --nodelist (or drop it and let Slurm schedule any GPU node),
 #      --cpus-per-task, and --time for your cluster -- this job runs
 #      longer than train_model.sbatch alone (all five steps, not just
@@ -91,7 +93,7 @@
 #SBATCH --nodelist=gpgpu01
 
 REPO_DIR=.                              # this repository's root
-DATASETS_DIR=../datasets                # sibling datasets/ folder -- see point 3 above; adjust if yours lives elsewhere
+DATASETS_DIR=/home/hpc/users/sonja.filiposka/resources/datasets    # this cluster's actual datasets location -- see point 3 above; adjust if yours lives elsewhere
 IMAGE=/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif    # built from requirements/train.txt (see README)
 
 # Optional: override this run's parameters instead of hand-editing the
