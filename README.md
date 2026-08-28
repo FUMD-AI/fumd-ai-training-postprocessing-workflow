@@ -169,6 +169,29 @@ invocation (just against a different notebook):
   log) is the upside. Neither pattern has been exercised on real Slurm
   infrastructure yet -- see "Validation status" below.
 
+`run_pipeline.sbatch` and `evaluate_model.sbatch` -- the two templates
+whose notebooks take raw `dataset_labeled_w<W>.csv`/`events_all_w<W>.csv`
+paths (`DATASET_PATH`, `EVENTS_CSV_PATH`, `CROSS_RUN_DATASET_PATHS`,
+`COMBINE_DATASET_PATHS`, ...) -- bind a second host directory,
+`DATASETS_DIR`, into the container at `/datasets`, separately from
+`REPO_DIR`'s own bind at `/workflow`. This matters because Singularity's
+`--bind` only exposes the exact directory you name, not its parent: this
+project's own convention (see the `../datasets/...` paths used throughout
+this README's real-data command examples above, e.g. "Optional: combining
+datasets for training (Step 1b)") keeps datasets in a folder next to the
+repository checkout, not inside it (so it's never committed), and
+a relative path like `../datasets/...` from inside `/workflow` wouldn't
+resolve to anything actually mounted in the container even though the
+identical relative path works fine locally (not inside a container) --
+this doesn't depend on whatever a given cluster's Singularity
+configuration happens to auto-bind by default, which varies. `DATASETS_DIR`
+defaults to `../datasets` (a sibling of `REPO_DIR`, matching that
+convention); dataset-path parameters for these two templates are then set
+using the in-container `/datasets/...` mount point, not the host path --
+see either template's own header comment for worked examples.
+`train_model.sbatch` doesn't need this: Step 2 alone only takes `INPUT_DIR`/
+`OUTPUT_DIR` (Step 1's windowed output, not a raw dataset file).
+
 `jupyter execute` is `nbclient`'s own CLI -- it has no
 `-p NAME VALUE`-style parameter-injection flag the way `papermill` does, so
 a run is configured one of two ways:

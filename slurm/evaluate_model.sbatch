@@ -12,6 +12,15 @@
 # see train_model.sbatch's header comment for why this works. IMAGE below
 # already points at the built .sif on this cluster -- update it (and
 # REPO_DIR/--nodelist) as in train_model.sbatch if that changes.
+#
+# CROSS_RUN_DATASET_PATHS entries need to resolve inside the container, not
+# just on the host -- DATASETS_DIR below is bound separately from REPO_DIR
+# (Singularity's --bind only exposes the exact directory you name, not its
+# parent, so a relative "../datasets/..." path from inside the container
+# wouldn't resolve even though it works locally) and mounted at /datasets;
+# point CROSS_RUN_DATASET_PATHS entries at /datasets/... accordingly, e.g.
+# '["/datasets/900_1/dataset_labeled_w3.csv"]'. See run_pipeline.sbatch's
+# header comment for the fuller explanation.
 
 #SBATCH --job-name fumd_evaluate_model
 #SBATCH --output logs/evaluate_model_%j.out
@@ -21,14 +30,18 @@
 #SBATCH --nodelist=gpgpu01
 
 REPO_DIR=.
+DATASETS_DIR=../datasets                # sibling datasets/ folder -- see header comment above; adjust if yours lives elsewhere
 IMAGE=/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif
 
 # Optional: override this run's parameters (see train_model.sbatch):
 # export RUN_DIR=/absolute/path/on/cluster/pipeline_run
-# export CROSS_RUN_DATASET_PATHS='["/abs/other_dataset_labeled_w3.csv"]'
+# export CROSS_RUN_DATASET_PATHS='["/datasets/900_1/dataset_labeled_w3.csv"]'
 
 NOTEBOOK=notebooks/step_3_evaluate_model.ipynb
 
 mkdir -p logs
-singularity exec --nv --pwd /workflow --bind "${REPO_DIR}:/workflow" "${IMAGE}" \
+singularity exec --nv --pwd /workflow \
+    --bind "${REPO_DIR}:/workflow" \
+    --bind "${DATASETS_DIR}:/datasets" \
+    "${IMAGE}" \
     jupyter execute "/workflow/${NOTEBOOK}"

@@ -53,7 +53,23 @@
 #      on the source notebooks" for why pyrosm was never straightforward
 #      to install). Update IMAGE if that path changes, and point REPO_DIR
 #      at this repository's root on the cluster's filesystem.
-#   3. Adjust --nodelist (or drop it and let Slurm schedule any GPU node),
+#   3. Point DATASETS_DIR at wherever your dataset_labeled_w<W>.csv /
+#      events_all_w<W>.csv files live -- this project's own convention
+#      (see README) is a `datasets/` folder as a SIBLING of this repo's
+#      checkout, matching the default below. This is bound into the
+#      container separately from REPO_DIR and deliberately NOT just
+#      referenced as "../datasets" from inside it: Singularity's --bind
+#      only exposes the exact directory you name (REPO_DIR -> /workflow
+#      here), not its parent, so a relative "../..." path from /workflow
+#      would resolve outside anything actually mounted into the container
+#      and fail, even though the same relative path works fine locally
+#      (not inside a container) or on a cluster whose Singularity config
+#      happens to auto-bind the wider filesystem -- don't rely on that.
+#      DATASET_PATH/EVENTS_CSV_PATH/CROSS_RUN_DATASET_PATHS/
+#      COMBINE_DATASET_PATHS/COMBINE_CROSS_RUN_DATASET_PATHS below all use
+#      the in-container /datasets/... path this mount creates, not the
+#      host path.
+#   4. Adjust --nodelist (or drop it and let Slurm schedule any GPU node),
 #      --cpus-per-task, and --time for your cluster -- this job runs
 #      longer than train_model.sbatch alone (all five steps, not just
 #      training), so a queue with a short per-job time limit may need a
@@ -68,20 +84,32 @@
 #SBATCH --nodelist=gpgpu01
 
 REPO_DIR=.                              # this repository's root
+DATASETS_DIR=../datasets                # sibling datasets/ folder -- see point 3 above; adjust if yours lives elsewhere
 IMAGE=/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif    # built from requirements/train.txt (see README)
 
 # Optional: override this run's parameters instead of hand-editing the
 # notebook (any parameter name from run_pipeline.ipynb's parameters cell
-# works the same way):
-# export DATASET_PATH=/absolute/path/on/cluster/dataset_labeled_w3.csv
-# export EVENTS_CSV_PATH=/absolute/path/on/cluster/events_all_w3.csv
-# export OUTPUT_DIR=/absolute/path/on/cluster/pipeline_run
+# works the same way). Dataset paths use the /datasets/... mount point
+# this script binds DATASETS_DIR to (see point 3 above), e.g. for a
+# DATASETS_DIR/1000_2/dataset_labeled_w3.csv file on the host:
+# export DATASET_PATH=/datasets/1000_2/dataset_labeled_w3.csv
+# export EVENTS_CSV_PATH=/datasets/1000_2/events_all_w3.csv
+# export OUTPUT_DIR=pipeline_run_1000_2
 # export EPOCHS=50
-# export CROSS_RUN_DATASET_PATHS='["/abs/other_dataset_labeled_w3.csv"]'
+# export CROSS_RUN_DATASET_PATHS='["/datasets/900_1/dataset_labeled_w3.csv","/datasets/1000_1/dataset_labeled_w3.csv"]'
 # export OSM_GEOPACKAGE_PATH=/absolute/path/on/cluster/roads.osm.geopackage.zip
+#
+# Leave COMBINE_DATASET_PATHS unset (the default) to run ONLY the main,
+# single-dataset model above -- no combined-dataset track, same as a plain
+# `jupyter execute run_pipeline.ipynb` with COMBINE_DATASET_PATHS=[]. Set
+# it (same /datasets/... paths, see point 1 above) to also run that track
+# in this same job.
 
 NOTEBOOK=run_pipeline.ipynb
 
 mkdir -p logs
-singularity exec --nv --pwd /workflow --bind "${REPO_DIR}:/workflow" "${IMAGE}" \
+singularity exec --nv --pwd /workflow \
+    --bind "${REPO_DIR}:/workflow" \
+    --bind "${DATASETS_DIR}:/datasets" \
+    "${IMAGE}" \
     jupyter execute "/workflow/${NOTEBOOK}"
