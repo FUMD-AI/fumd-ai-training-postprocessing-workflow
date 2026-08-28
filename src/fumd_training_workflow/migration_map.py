@@ -65,6 +65,30 @@ DRIVING_HIGHWAY_TYPES = (
 )
 
 
+# Known real-world base-station coordinates for the Alicante area every
+# dataset bundled with/available to this repository was simulated over
+# (confirmed against dataset_labeled_w<W>.csv's own x/y extent, ~-0.497 to
+# -0.477 lon, ~38.336 to 38.352 lat) -- the same 9-site dict
+# `mapa_EB_K_mapAlacant.ipynb` and `estimacion_antenas.ipynb` both hardcoded
+# (comment there: "Coordinates in excel file Alicante_touristic_places").
+# {cell_id: (lon, lat)}, ready to pass as `bs_coords`/`BS_COORDS` for any
+# run against this project's own datasets. Not a real base-station-to-
+# simulation-cell-id mapping for a *different* simulated area or city --
+# build a new dict by hand for one of those (see this module's own
+# docstring above).
+ALICANTE_BS_COORDS: dict[int, tuple[float, float]] = {
+    1: (-0.4902473, 38.3459893),  # Luceros
+    2: (-0.4853830, 38.3435634),  # Gabriel Miro
+    3: (-0.4948606, 38.3430170),  # Teatro Arniches
+    4: (-0.4867156, 38.3490117),  # Plaza del Mercado
+    5: (-0.4883843, 38.3394852),  # Paseo Canalejas
+    6: (-0.4819092, 38.3484225),  # Parque de La Ereta
+    7: (-0.4789899, 38.3479951),  # Castillo Santa Barbara
+    8: (-0.4785041, 38.3437444),  # Playa Postiguet
+    9: (-0.4802594, 38.3395432),  # Zona Volvo
+}
+
+
 def _read_wkb_geometry(buf: bytes, offset: int = 0) -> tuple[list[list[tuple[float, float]]], int]:
     """Parse one standard ISO WKB geometry starting at `offset` in `buf`.
     Only LineString (type 2) and MultiLineString (type 5) are supported --

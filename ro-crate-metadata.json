@@ -906,8 +906,8 @@
       "@id": "#param-bs-coords",
       "@type": "FormalParameter",
       "name": "BS_COORDS",
-      "description": "Optional {cell_id: (lon, lat)} real coordinates to overlay -- a hand-curated dict of known site coordinates (e.g. from your own BS-location analysis or operator/OSM data).",
-      "defaultValue": "{}"
+      "description": "{cell_id: (lon, lat)} real coordinates to overlay -- a hand-curated dict of known site coordinates. Defaults to migration_map.ALICANTE_BS_COORDS, the known real-world site coordinates for the Alicante area every dataset bundled with/available to this repository was simulated over; pass {} (or a different dict, e.g. from your own BS-location analysis or operator/OSM data) for a different simulated area.",
+      "defaultValue": "migration_map.ALICANTE_BS_COORDS"
     },
     {
       "@id": "#param-step5-output-dir",

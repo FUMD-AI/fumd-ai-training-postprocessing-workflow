@@ -332,7 +332,18 @@ repository's git history if real measurement data becomes available later.
 - **Per-city hardcoded BS coordinates.** `mapa_EB_K_mapAlacant.ipynb` /
   `mapa_EB_K-mapAveiro.ipynb` duplicated almost all of their logic, differing
   mainly in a hardcoded coordinate dict (or a computed one). `migration_map.py`
-  takes `bs_coords` as a plain parameter instead.
+  takes `bs_coords` as a plain parameter instead -- `migration_map.ALICANTE_BS_COORDS`
+  (the same 9-site dict both original notebooks hardcoded) is Step 5's/
+  `run_pipeline.ipynb`'s default, since every dataset bundled with/available
+  to this repository was simulated over that same area; pass `{}` or a
+  different dict for a different simulated area.
+- **Swapped C2b/C3 event-case labels.** The upstream event data's `case`
+  column has "C2b_handover_sin_historico" ("no prior history") and
+  "C3_pingpong" ("ABA") with their numeric prefixes swapped (confirmed
+  against real `events_all_w3.csv`). `mapa_EB_K_mapAlacant.ipynb` already
+  corrected this by hand at plot time; `migration_map.add_case_short` now
+  does the same swap once, so every consumer of `case_short` gets the
+  corrected code, not just the original notebook's plot.
 - **New: migration-state accuracy breakdown.** `evaluate.evaluate_migration_breakdown`
   reports accuracy separately for steady-state vs. pre-handover-window rows
   -- only possible because the new preprocessing pipeline's `migration`
