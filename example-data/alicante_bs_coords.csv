@@ -1,0 +1,29 @@
+# Real-world coordinates for the Alicante base-station sites every dataset
+# bundled with/available to this repository was simulated over (cell ids
+# match the simulation's servingCell/destination numbering, confirmed
+# against dataset_labeled_w<W>.csv's own x/y extent: ~-0.497 to -0.477 lon,
+# ~38.336 to 38.352 lat).
+#
+# Source: "Alicante_touristic_places" spreadsheet, the same source
+# mapa_EB_K_mapAlacant.ipynb and estimacion_antenas.ipynb both hardcoded
+# from -- no further provenance (methodology/accuracy/original author) is
+# recorded beyond that spreadsheet's name; see migration_map.py's own
+# docstring and README.md's "Notes on the source notebooks" section for
+# the full context.
+#
+# Not a real base-station-to-simulation-cell-id mapping for a *different*
+# simulated area or city -- there is no automatic way to derive that
+# correspondence (see migration_map.py's module docstring). Build a new
+# file in this same cell_id,name,lon,lat shape by hand for a different
+# area, and load it with migration_map.load_bs_coords_from_csv, or pass an
+# equivalent {cell_id: (lon, lat)} dict directly as BS_COORDS/bs_coords.
+cell_id,name,lon,lat
+1,Luceros,-0.4902473,38.3459893
+2,Gabriel Miro,-0.4853830,38.3435634
+3,Teatro Arniches,-0.4948606,38.3430170
+4,Plaza del Mercado,-0.4867156,38.3490117
+5,Paseo Canalejas,-0.4883843,38.3394852
+6,Parque de La Ereta,-0.4819092,38.3484225
+7,Castillo Santa Barbara,-0.4789899,38.3479951
+8,Playa Postiguet,-0.4785041,38.3437444
+9,Zona Volvo,-0.4802594,38.3395432

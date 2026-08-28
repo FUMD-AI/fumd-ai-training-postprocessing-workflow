@@ -153,6 +153,9 @@
         },
         {
           "@id": "example-data/events_all_example.csv"
+        },
+        {
+          "@id": "example-data/alicante_bs_coords.csv"
         }
       ]
     },
@@ -958,7 +961,7 @@
       "@id": "#param-bs-coords",
       "@type": "FormalParameter",
       "name": "BS_COORDS",
-      "description": "{cell_id: (lon, lat)} real coordinates to overlay -- a hand-curated dict of known site coordinates. Defaults to migration_map.ALICANTE_BS_COORDS, the known real-world site coordinates for the Alicante area every dataset bundled with/available to this repository was simulated over; pass {} (or a different dict, e.g. from your own BS-location analysis or operator/OSM data) for a different simulated area.",
+      "description": "{cell_id: (lon, lat)} real coordinates to overlay -- a hand-curated dict of known site coordinates. Defaults to migration_map.ALICANTE_BS_COORDS, loaded via migration_map.load_bs_coords_from_csv from the bundled example-data/alicante_bs_coords.csv (the known real-world site coordinates for the Alicante area every dataset bundled with/available to this repository was simulated over); pass {} (or a different dict, e.g. built from your own CSV via the same loader, or from your own BS-location analysis or operator/OSM data) for a different simulated area.",
       "defaultValue": "migration_map.ALICANTE_BS_COORDS"
     },
     {
@@ -1150,6 +1153,12 @@
       "@type": "File",
       "encodingFormat": "text/csv",
       "description": "Matching slice of pipeline_run_900_3/events_all_w3.csv for the same 8 vehicles as dataset_labeled_example.csv. Bundled as Step 5's default EVENTS_CSV_PATH."
+    },
+    {
+      "@id": "example-data/alicante_bs_coords.csv",
+      "@type": "File",
+      "encodingFormat": "text/csv",
+      "description": "Real-world coordinates (cell_id,name,lon,lat) for the 9 Alicante base-station sites every dataset bundled with/available to this repository was simulated over -- the source migration_map.ALICANTE_BS_COORDS is loaded from (migration_map.load_bs_coords_from_csv), and the default for BS_COORDS/bs_coords across Step 5 and run_pipeline.ipynb. Sourced from the 'Alicante_touristic_places' spreadsheet, the same source mapa_EB_K_mapAlacant.ipynb and estimacion_antenas.ipynb both hardcoded from -- see the file's own header comment and README.md's \"Notes on the source notebooks\" section for the full provenance and this mapping's inherent limits."
     },
     {
       "@id": "#jupyter-notebook",

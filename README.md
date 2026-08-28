@@ -242,7 +242,11 @@ the pipeline mechanics work), this one is real simulation output, chosen to
 include actual `migration` events so Step 1's sliding windows and Step 3's
 migration-state accuracy breakdown both have something to show.
 `example-data/events_all_example.csv` is the matching slice of that run's
-`events_all_w3.csv`, for Step 5.
+`events_all_w3.csv`, for Step 5. `example-data/alicante_bs_coords.csv` is
+the real-world base-station site coordinates `migration_map.ALICANTE_BS_COORDS`
+is loaded from (`migration_map.load_bs_coords_from_csv`) -- see "Notes on
+the source notebooks" below for its provenance and the reasoning for
+packaging it as its own file instead of a Python constant.
 
 ## Street-map backgrounds (Step 5)
 
@@ -289,7 +293,8 @@ If both are set, `OSM_GEOPACKAGE_PATH` is tried first.
 │   └── run_pipeline.sbatch       Steps 1-5 chained, one Slurm/Singularity job
 ├── example-data/
 │   ├── dataset_labeled_example.csv
-│   └── events_all_example.csv
+│   ├── events_all_example.csv
+│   └── alicante_bs_coords.csv    real BS site coordinates -- migration_map.ALICANTE_BS_COORDS's source
 ├── src/
 │   └── fumd_training_workflow/
 │       ├── __init__.py
@@ -372,10 +377,21 @@ repository's git history if real measurement data becomes available later.
   `mapa_EB_K-mapAveiro.ipynb` duplicated almost all of their logic, differing
   mainly in a hardcoded coordinate dict (or a computed one). `migration_map.py`
   takes `bs_coords` as a plain parameter instead -- `migration_map.ALICANTE_BS_COORDS`
-  (the same 9-site dict both original notebooks hardcoded) is Step 5's/
+  (the same 9-site mapping both original notebooks hardcoded) is Step 5's/
   `run_pipeline.ipynb`'s default, since every dataset bundled with/available
   to this repository was simulated over that same area; pass `{}` or a
-  different dict for a different simulated area.
+  different dict for a different simulated area. That default is itself
+  loaded from a bundled file (`example-data/alicante_bs_coords.csv`, via
+  `migration_map.load_bs_coords_from_csv`) rather than a Python literal --
+  the original notebooks' only recorded provenance was a code comment
+  naming a spreadsheet ("Alicante_touristic_places") that isn't itself in
+  the repo; as a plain CSV with its own header comment, this coordinate
+  data is now findable and reusable as data in its own right (also listed
+  in `ro-crate-metadata.json`), not just importable from Python source.
+  Adapting to a different simulated area means hand-building an equivalent
+  CSV (`cell_id,name,lon,lat`) and loading it the same way -- there's no
+  automatic way to derive a simulation cell id's real-world site (see
+  `migration_map.py`'s own module docstring).
 - **Swapped C2b/C3 event-case labels.** The upstream event data's `case`
   column has "C2b_handover_sin_historico" ("no prior history") and
   "C3_pingpong" ("ABA") with their numeric prefixes swapped (confirmed
@@ -619,6 +635,22 @@ held-out split regardless of whether a cross-run check is also requested.
 See "Optional: combining datasets for training (Step 1b)" above for the
 full behavior and "Validation status" for what's been verified so far
 (checked statically and against real file paths; not yet run for real).
+
+**Unreleased (continued):** `migration_map.ALICANTE_BS_COORDS` is now loaded
+from a bundled CSV (`example-data/alicante_bs_coords.csv`, via the new
+`migration_map.load_bs_coords_from_csv`) instead of being a Python dict
+literal, and is now also listed as its own File node in
+`ro-crate-metadata.json` -- a FAIR-packaging gap: this coordinate data was
+being shipped with the repository (as Step 5's/`run_pipeline.ipynb`'s
+default `BS_COORDS`) without being independently findable/citable as data,
+only readable by importing Python source. No behavior change --
+`ALICANTE_BS_COORDS` still resolves to the exact same 9 sites (verified by
+loading the real module and comparing against the prior literal). See
+"Notes on the source notebooks" above for the full reasoning, including why
+this doesn't (and can't) make adapting to a different simulated area fully
+automatic -- there's still no way to derive a simulation cell id's
+real-world site without domain knowledge, only a documented, reusable shape
+(`cell_id,name,lon,lat`) to supply it in.
 
 **v0.1.2** (2026-08-28): `plot_events_by_type` now crops every subplot to
 the bounding box of the actual matched events (`zoom_to_events`, default

@@ -65,28 +65,53 @@ DRIVING_HIGHWAY_TYPES = (
 )
 
 
+def load_bs_coords_from_csv(path: str) -> dict[int, tuple[float, float]]:
+    """
+    Load a `{cell_id: (lon, lat)}` dict from a CSV with `cell_id`, `lon`,
+    `lat` columns (an optional `name` column, e.g. a landmark label for
+    human readability, is accepted but not returned). Lines starting with
+    `#` are treated as comments and skipped, so a provenance header like
+    `example-data/alicante_bs_coords.csv`'s own can live in the same file.
+
+    This is both how `ALICANTE_BS_COORDS` below is built, and the intended
+    way to adapt `BS_COORDS`/`bs_coords` to a different simulated area:
+    there's no automatic way to derive a cell-id -> real-site-coordinate
+    correspondence (see this module's own docstring above for why), so
+    build a new CSV in this same `cell_id,name,lon,lat` shape by hand and
+    load it with this function, or pass an equivalent dict directly.
+    """
+    df = pd.read_csv(path, comment="#")
+    missing = {"cell_id", "lon", "lat"} - set(df.columns)
+    if missing:
+        raise ValueError(
+            f"load_bs_coords_from_csv: {path!r} is missing required "
+            f"column(s) {sorted(missing)} -- expected at least cell_id, "
+            "lon, lat (an optional 'name' column is fine too)."
+        )
+    return {
+        int(row.cell_id): (float(row.lon), float(row.lat))
+        for row in df.itertuples(index=False)
+    }
+
+
 # Known real-world base-station coordinates for the Alicante area every
-# dataset bundled with/available to this repository was simulated over
-# (confirmed against dataset_labeled_w<W>.csv's own x/y extent, ~-0.497 to
-# -0.477 lon, ~38.336 to 38.352 lat) -- the same 9-site dict
-# `mapa_EB_K_mapAlacant.ipynb` and `estimacion_antenas.ipynb` both hardcoded
-# (comment there: "Coordinates in excel file Alicante_touristic_places").
+# dataset bundled with/available to this repository was simulated over --
+# the same 9 sites `mapa_EB_K_mapAlacant.ipynb` and `estimacion_antenas.ipynb`
+# both hardcoded, now sourced from a bundled, citable file
+# (`example-data/alicante_bs_coords.csv`) instead of a Python literal, so
+# it's findable/reusable as data in its own right (see that file's own
+# header for full provenance and README.md's "Notes on the source
+# notebooks" section) -- not just importable from this module.
 # {cell_id: (lon, lat)}, ready to pass as `bs_coords`/`BS_COORDS` for any
 # run against this project's own datasets. Not a real base-station-to-
 # simulation-cell-id mapping for a *different* simulated area or city --
-# build a new dict by hand for one of those (see this module's own
-# docstring above).
-ALICANTE_BS_COORDS: dict[int, tuple[float, float]] = {
-    1: (-0.4902473, 38.3459893),  # Luceros
-    2: (-0.4853830, 38.3435634),  # Gabriel Miro
-    3: (-0.4948606, 38.3430170),  # Teatro Arniches
-    4: (-0.4867156, 38.3490117),  # Plaza del Mercado
-    5: (-0.4883843, 38.3394852),  # Paseo Canalejas
-    6: (-0.4819092, 38.3484225),  # Parque de La Ereta
-    7: (-0.4789899, 38.3479951),  # Castillo Santa Barbara
-    8: (-0.4785041, 38.3437444),  # Playa Postiguet
-    9: (-0.4802594, 38.3395432),  # Zona Volvo
-}
+# see `load_bs_coords_from_csv`'s own docstring above for that case.
+_ALICANTE_BS_COORDS_CSV = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "example-data",
+    "alicante_bs_coords.csv",
+)
+ALICANTE_BS_COORDS: dict[int, tuple[float, float]] = load_bs_coords_from_csv(_ALICANTE_BS_COORDS_CSV)
 
 
 def derive_events_path(dataset_path: str) -> str:
