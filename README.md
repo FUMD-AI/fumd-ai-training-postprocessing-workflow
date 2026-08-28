@@ -375,6 +375,22 @@ the exec()-based check that first caught the gap -- and every cell in all
 six notebooks now round-trips through real execution with its `id` field
 intact (nbformat's `MissingIDFieldWarning` is gone).
 
+Step 3's cross-run generalization check (`CROSS_RUN_DATASET_PATHS`) has
+also now been run for real, standalone against the already-trained
+`1200_1` model (no retraining needed -- Step 3 only transforms with the
+fitted scaler/encoders, never refits them) across every other full
+preprocessing run available (`1000_1`, `1000_2`, `1000_3`, `1200_2`,
+`1200_3`, `900_1` -- `900_2`/`900_3` excluded, 17-row incomplete runs).
+Result: the model generalizes cleanly -- overall accuracy on all six
+unseen runs (94.3%-94.6%) is actually slightly *higher* than on its own
+held-out `train_val` split (93.9%), and every run shows the same
+per-forecast-step degradation shape from +1s to +7s, no outliers or
+collapsed/degenerate scores. That's a good sign against overfitting to
+one run's specific road network or traffic pattern, though it's also
+only six runs from what looks like the same underlying simulated area at
+different vehicle counts -- not evidence of generalizing to a
+genuinely different road network or city.
+
 Neither Slurm submission pattern has been exercised on real Slurm
 infrastructure yet -- the per-step templates (`train_model.sbatch`/
 `evaluate_model.sbatch`) or the single-job `run_pipeline.sbatch` (see
