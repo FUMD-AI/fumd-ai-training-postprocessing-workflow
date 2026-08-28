@@ -45,10 +45,11 @@ jupyter execute notebooks/step_4_aggregate_training_metrics.ipynb  # no GPU need
 
 ## Pipeline overview
 
-Five notebooks. Steps 1-4 form the core chain from the preprocessing
+Six notebooks. Steps 1-4 form the core chain from the preprocessing
 workflow's labeled dataset to a trained, evaluated model; Step 5 is
 optional postprocessing that runs directly against the preprocessing
-workflow's own output and needs no GPU.
+workflow's own output and needs no GPU; Step 1b is an optional alternate
+entry point to Step 1 (combine several runs instead of using just one).
 
 | # | Notebook | Purpose | Input (default) | Output (default) | GPU? |
 |---|----------|---------|-------|--------|------|
@@ -262,7 +263,7 @@ If both are set, `OSM_GEOPACKAGE_PATH` is tried first.
 .
 ├── README.md
 ├── CITATION.cff                 citation metadata (GitHub/Zenodo citation widget)
-├── run_pipeline.ipynb            local/interactive orchestrator: runs Steps 1-5 in one call
+├── run_pipeline.ipynb            local/interactive orchestrator: runs Steps 1-5 (+ optional combined-dataset track) in one call
 ├── LICENSE.txt                  MIT (source code)
 ├── LICENSE-CC-BY-4.0.txt        CC BY 4.0 (explanatory text/figures)
 ├── ro-crate-metadata.json       FAIR/WorkflowHub packaging metadata
@@ -489,6 +490,26 @@ at +7s -- the same degradation shape from +1s to +7s as the earlier
 single-run (`1200_1`) baseline. Not yet evaluated through Step 3 against
 its own held-out split or any cross-run generalization check.
 
+The C2b/C3 case-label swap and the `ALICANTE_BS_COORDS` default (see
+"Notes on the source notebooks" above) have also both been confirmed by a
+genuine `jupyter execute notebooks/step_5_map_migration_events.ipynb` run
+against real `1200_1` data with `OSM_GEOPACKAGE_PATH` set -- zero errors,
+and the resulting `migration_events_by_type.pdf` matches
+`migration_events_4928.pdf`'s reference layout (BS rings in the right
+places/colors, C2b denser than C3 as expected for ABA vs. no-prior-history
+events).
+
+`run_pipeline.ipynb`'s new optional combined-dataset track
+(`COMBINE_DATASET_PATHS`/`COMBINE_OUTPUT_DIR`/`COMBINE_ID_OFFSET`/
+`COMBINE_CROSS_RUN_DATASET_PATHS`, chaining Step 1b -> Step 2 -> Step 3 as
+a second model alongside the main run) has been checked statically --
+every `nr.run_step` call's injected parameter names verified to exist in
+its target notebook's own parameters cell, no undefined-variable paths
+across the notebook's cells, Step 1b's own combine logic re-verified
+end-to-end through the exact same `inject_parameters` mechanism
+`run_pipeline.ipynb` uses -- but not yet run for real as part of an actual
+`jupyter execute run_pipeline.ipynb` invocation.
+
 Neither Slurm submission pattern has been exercised on real Slurm
 infrastructure yet -- the per-step templates (`train_model.sbatch`/
 `evaluate_model.sbatch`) or the single-job `run_pipeline.sbatch` (see
@@ -510,6 +531,26 @@ function backing it -- see "Optional: combining datasets for training
 including a genuine `jupyter execute` run against real `900_1`/`1000_1`/
 `1200_1` data (zero errors, results matching the earlier exec()-based
 check exactly).
+
+**Unreleased (continued):** fixed the swapped C2b/C3 event-case labels
+(`migration_map.add_case_short`) and added `migration_map.ALICANTE_BS_COORDS`
+as Step 5's/`run_pipeline.ipynb`'s default `BS_COORDS`, so migration maps
+show base-station markers out of the box instead of only when the caller
+supplies their own coordinate dict -- see "Notes on the source notebooks"
+above for both, and "Validation status" for the genuine `jupyter execute`
+run confirming both together against real data.
+
+**Unreleased (continued):** `run_pipeline.ipynb` can now also chain Step
+1b's combined-dataset track (Step 1b -> Step 2 -> Step 3, a second
+independent model) in the same call as the main Steps 1-5 run -- see
+"Optional: combining datasets for training (Step 1b)" above for the full
+example, and "Validation status" for what's been verified so far (static
+checks only; not yet run for real).
+
+**Unreleased (continued):** `slurm/train_model.sbatch`/`evaluate_model.sbatch`/
+`run_pipeline.sbatch` now default `IMAGE` to this project's actual built
+`.sif` path on the cluster (`/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif`)
+instead of a bare filename placeholder.
 
 **v0.1.2** (2026-08-28): `plot_events_by_type` now crops every subplot to
 the bounding box of the actual matched events (`zoom_to_events`, default

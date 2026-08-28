@@ -1,4 +1,6 @@
 # Steps 1-4 (data windowing, training, evaluation, metrics aggregation) --
+# also covers the optional Step 1b (combine multiple datasets before
+# windowing), which uses the exact same numpy/pandas/scikit-learn --
 # pinned to match this project's Slurm/Singularity execution image
 # (image_jupiter_eosc.sif, Python 3.10.9), so a local dev environment
 # behaves identically to the GPU cluster it's ultimately run on. Do not
