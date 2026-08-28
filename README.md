@@ -18,10 +18,16 @@ event map -- is runnable immediately, in one call:
 jupyter execute run_pipeline.ipynb
 ```
 
-For a real dataset, either edit `run_pipeline.ipynb`'s own parameters cell
-(`DATASET_PATH`, `EPOCHS`, ...) for local/interactive use, or -- since this
-project's actual execution environment submits **one notebook at a time** to
-Slurm -- edit and submit the GPU steps individually:
+For a real dataset, edit `run_pipeline.ipynb`'s own parameters cell
+(`DATASET_PATH`, `EPOCHS`, ...) and either run it directly for
+local/interactive use, or submit the whole chain to Slurm as one job:
+
+```
+sbatch slurm/run_pipeline.sbatch   # GPU -- all five steps, one job
+```
+
+Or submit the GPU steps individually instead (finer-grained -- see
+"Execution environment" below for the tradeoff between the two):
 
 ```
 # edit notebooks/step_1_load_and_window_dataset.ipynb's parameters cell, then:
@@ -36,9 +42,6 @@ sbatch slurm/evaluate_model.sbatch                                 # GPU
 # edit notebooks/step_4_aggregate_training_metrics.ipynb's parameters cell, then:
 jupyter execute notebooks/step_4_aggregate_training_metrics.ipynb  # no GPU needed
 ```
-
-See "Execution environment" below for why there's no `papermill`-style
-single-command orchestration of the GPU steps.
 
 ## Pipeline overview
 
@@ -62,15 +65,42 @@ stands on its own.
 
 ## Execution environment
 
-This project's notebooks run inside a Slurm job, one notebook per job, via:
+This project's notebooks run inside a Slurm job via:
 
 ```
 singularity exec --nv --pwd /workflow --bind .:/workflow image_jupiter_eosc.sif \
     jupyter execute /workflow/notebooks/step_2_train_model.ipynb
 ```
 
-(`slurm/train_model.sbatch` / `slurm/evaluate_model.sbatch` are ready-to-edit
-templates for this.) `jupyter execute` is `nbclient`'s own CLI -- it has no
+Two submission patterns are available, and both use exactly this
+invocation (just against a different notebook):
+
+- **One notebook per job** -- `slurm/train_model.sbatch` (Step 2) /
+  `slurm/evaluate_model.sbatch` (Step 3), the finer-grained option: only
+  the GPU-needing steps hold a GPU allocation, and a failed Step 2 can be
+  resubmitted without re-running Step 1. Step 1 (windowing) and Step 4
+  (metrics aggregation) are meant to run locally/on a login node instead
+  (see `requirements/train.txt`'s own comment on this); Step 5 (mapping)
+  likewise -- see `requirements/postprocess.txt` and "Notes on the source
+  notebooks" below.
+- **The whole chain as one job** -- `slurm/run_pipeline.sbatch` submits
+  `jupyter execute run_pipeline.ipynb` itself, chaining all five steps
+  (including 1/4/5) inside a single GPU allocation, mirroring a local
+  `jupyter execute run_pipeline.ipynb` run exactly. This works because
+  `run_pipeline.ipynb`'s own kernel spawns each step's kernel as a plain
+  OS subprocess (`nbclient.NotebookClient`, invoked from
+  `src/fumd_training_workflow/notebook_runner.py`'s `run_step`), which
+  inherits this job's environment, Singularity's `--nv` GPU device
+  bindings, and Slurm's cgroup-based GPU allocation the same way any other
+  child process of the job would -- there's no separate scheduling step
+  where a child kernel could land on a different, non-GPU node. The
+  tradeoff against the per-step templates: this holds a GPU allocation for
+  the whole run, including the CPU-only steps, which wastes GPU-node time
+  on a contended queue; simpler to submit and reason about (one job, one
+  log) is the upside. Neither pattern has been exercised on real Slurm
+  infrastructure yet -- see "Validation status" below.
+
+`jupyter execute` is `nbclient`'s own CLI -- it has no
 `-p NAME VALUE`-style parameter-injection flag the way `papermill` does, so
 a run is configured one of two ways:
 
@@ -102,9 +132,11 @@ a notebook is run standalone (`jupyter execute notebooks/step_N...ipynb`,
 including every `slurm/*.sbatch` submission) or chained from
 `run_pipeline.ipynb`.
 
-`run_pipeline.ipynb` still exists for local/interactive convenience (e.g.
-running the whole chain against the bundled example on a laptop, or as a
-quick end-to-end smoke test) -- it chains all five steps via
+`run_pipeline.ipynb` is the same notebook either way -- locally for
+interactive/development use (e.g. running the whole chain against the
+bundled example on a laptop, or as a quick end-to-end smoke test) and,
+via `slurm/run_pipeline.sbatch` above, as a single Slurm submission. It
+chains all five steps via
 `src/fumd_training_workflow/notebook_runner.py`, which does the same
 "overwrite-the-parameters-cell-then-execute" trick `papermill` is built
 around, implemented directly on `nbformat`/`nbclient` (both already required
@@ -184,7 +216,8 @@ If both are set, `OSM_GEOPACKAGE_PATH` is tried first.
 │   └── postprocess.txt           Step 5 (local, unpinned)
 ├── slurm/
 │   ├── train_model.sbatch        Step 2 Slurm/Singularity submission template
-│   └── evaluate_model.sbatch     Step 3 Slurm/Singularity submission template
+│   ├── evaluate_model.sbatch     Step 3 Slurm/Singularity submission template
+│   └── run_pipeline.sbatch       Steps 1-5 chained, one Slurm/Singularity job
 ├── example-data/
 │   ├── dataset_labeled_example.csv
 │   └── events_all_example.csv
@@ -342,9 +375,16 @@ the exec()-based check that first caught the gap -- and every cell in all
 six notebooks now round-trips through real execution with its `id` field
 intact (nbformat's `MissingIDFieldWarning` is gone).
 
-Only the Slurm-submitted standalone-notebook path (as opposed to the
-`run_pipeline.ipynb` chain) remains unconfirmed -- worth a first real
-submission before fully trusting it.
+Neither Slurm submission pattern has been exercised on real Slurm
+infrastructure yet -- the per-step templates (`train_model.sbatch`/
+`evaluate_model.sbatch`) or the single-job `run_pipeline.sbatch` (see
+"Execution environment" above for both). `run_pipeline.sbatch` in
+particular rests on a specific claim -- that a child kernel spawned by
+`run_pipeline.ipynb`'s own kernel inherits this job's GPU allocation --
+that follows from how Singularity/Slurm scope GPU access to a job's whole
+process tree, but was reasoned through rather than watched happen on a
+real cluster; worth confirming with a first real submission (e.g. a
+low-`EPOCHS` run) before relying on it for a real training run.
 
 ## Development notes
 
