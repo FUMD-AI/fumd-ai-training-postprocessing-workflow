@@ -311,11 +311,17 @@ for `None`/boolean parameter values, `inject_parameters()` silently
 undefining any parameter a caller didn't explicitly override, and a
 `Lambda`-layer model architecture choice that Keras's `.keras` safe-mode
 deserialization refuses to reload (`model.py` now uses a proper
-subclassed `ZeroInitialState` layer instead). Step 5 and the
-Slurm-submitted standalone-notebook path (as opposed to the
-`run_pipeline.ipynb` chain) have not yet had a from-scratch confirmation
-run since those fixes landed -- worth a first real Slurm submission
-before fully trusting that path.
+subclassed `ZeroInitialState` layer instead). Step 5's own migration-map
+plotting logic (`migration_map.py`, including the new GeoPackage street-map
+path) has since been verified against real data too -- a BBBike GeoPackage
+extract and the real matched events from the `1000_1` run -- but only by
+exec()ing the notebook's actual cell source in sequence, not a genuine
+`jupyter execute`/papermill run, since no such tool was available in that
+verification environment. The Slurm-submitted standalone-notebook path (as
+opposed to the `run_pipeline.ipynb` chain), and a true `jupyter execute`
+confirmation of Step 5 and the full chained `run_pipeline.ipynb` (Steps
+1-5 together) against real data, have not yet happened -- worth doing
+both before fully trusting either path.
 
 ## Development notes
 
