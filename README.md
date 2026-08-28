@@ -404,7 +404,52 @@ low-`EPOCHS` run) before relying on it for a real training run.
 
 ## Development notes
 
-**v0.1.1** (unreleased): first real (non-syntax-check-only) TensorFlow
+**v0.1.2** (2026-08-28): `plot_events_by_type` now crops every subplot to
+the bounding box of the actual matched events (`zoom_to_events`, default
+on, padded 10% by `zoom_padding_frac`) instead of autoscaling to the full
+street-map/simulation extent -- the event scatter used to end up crowded
+into a small corner of an otherwise-empty plot. `run_pipeline.ipynb` was
+also silently dropping `BS_COORDS`/`OSM_GEOPACKAGE_PATH`/`OSM_PBF_PATH`
+when chaining Step 5 -- its own parameters cell never had them, so a real
+street-map file never reached the map even when set as an environment
+variable, no error or warning either. Both fixed and verified together in
+one genuine `jupyter execute run_pipeline.ipynb` run -- that run also
+confirmed nbformat's `MissingIDFieldWarning` is gone after backfilling
+every cell's missing `id` field across all six notebooks (a
+future-nbformat-version hard error otherwise, harmless today).
+
+That same real-run-confirmation gap in "Validation status" is now fully
+closed: a genuine `jupyter execute run_pipeline.ipynb` run against the
+full `1200_1` preprocessing run (123,203 rows), `EPOCHS=50`, confirmed
+`EarlyStopping` stops training at the right point (`epochs_run: 8` against
+the ceiling, validation loss bottoming at epoch 4 before rising) and
+produced accuracy numbers matching the earlier 5-epoch run to within 0.03
+points across every metric checked -- see "Validation status" for the
+full numbers. Step 3's `CROSS_RUN_DATASET_PATHS` generalization check was
+also run for real (standalone, no retraining needed) against every other
+full preprocessing run available -- all six scored 94.3%-94.6% accuracy,
+slightly *higher* than the model's own held-out validation split (93.9%),
+no outliers.
+
+Added `slurm/run_pipeline.sbatch`: submits the full Steps 1-5 chain as a
+single Slurm job, the same `jupyter execute run_pipeline.ipynb` invocation
+as a local run. This corrects an earlier design claim (in
+`run_pipeline.ipynb`'s own markdown cell and this README) that chaining
+all five steps as one Slurm job wasn't GPU-reachable -- reasoning through
+how Singularity's `--nv` binding and Slurm's GPU allocation scope to a
+job's whole process tree (not just its top process) shows a child kernel
+spawned by `run_pipeline.ipynb`'s own kernel does inherit that job's GPU
+access, the same as any other child process would. Neither Slurm
+submission pattern (this new one or the pre-existing per-step templates)
+has actually been run on real Slurm infrastructure yet -- see "Validation
+status" and `run_pipeline.sbatch`'s own header comment.
+
+Also: `.gitignore` now covers `*.gpkg`/`*.geopackage.zip` alongside the
+existing `*.osm.pbf`, so a real GeoPackage extract used for local testing
+(as this release's own verification runs did) doesn't get committed by
+accident.
+
+**v0.1.1** (2026-08-27): first real (non-syntax-check-only) TensorFlow
 execution of `model.py`/Step 2/Step 3/`run_pipeline.ipynb`, against a full
 preprocessing run rather than only the bundled example. Fixed four bugs
 this surfaced -- see "Validation status" above for what and why. No
@@ -458,20 +503,6 @@ no `geopandas`/`fiona`/GDAL needed, unlike the existing `pyrosm`+
 extract of the `1000_1` run's event area (659 road segments after
 filtering to driving-relevant `highway` tags) and the actual matched
 events -- clean overlay, no change needed to the x-axis tick fix above.
-
-Also: `plot_events_by_type` now crops every subplot to the bounding box of
-the actual matched events (`zoom_to_events`, default on, padded 10% by
-`zoom_padding_frac`) instead of autoscaling to the full street-map/
-simulation extent -- the event scatter used to end up crowded into a small
-corner of an otherwise-empty plot. And `run_pipeline.ipynb` was silently
-dropping `BS_COORDS`/`OSM_GEOPACKAGE_PATH`/`OSM_PBF_PATH` when chaining
-Step 5 -- its own parameters cell never had them, so a real street-map file
-never reached the map even when set as an environment variable, no error
-or warning either. Both fixed and verified together in one genuine
-`jupyter execute run_pipeline.ipynb` run (see "Validation status" above)
--- that run also confirmed nbformat's `MissingIDFieldWarning` is gone
-after backfilling every cell's missing `id` field across all six
-notebooks (a future-nbformat-version hard error otherwise, harmless today).
 
 **v0.1.0** initial release: rebuilds the five exploratory notebooks listed
 above as this parameterized pipeline. See "Notes on the source notebooks"
