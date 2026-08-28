@@ -439,8 +439,19 @@ windowing/scaling/saving -- and has since also been run for real
 against the same three runs), zero errors. `run_manifest.json` from that
 real run reports 223,410 train windows and 55,323 val windows -- an exact
 match to the earlier exec()-based check, confirming the two runs agree
-(deterministic given `RANDOM_SEED=42`). Not yet used for an actual model
-training run against the combined output.
+(deterministic given `RANDOM_SEED=42`).
+
+Step 2 has since also been run for real against that combined output
+(`INPUT_DIR=pipeline_run_combined OUTPUT_DIR=pipeline_run_combined jupyter
+execute notebooks/step_2_train_model.ipynb`), zero errors, `EPOCHS=50`
+default. `EarlyStopping` behaved as expected: `run_manifest.json` records
+`epochs_run: 6` against the 50-epoch ceiling (`val_loss` bottoms at epoch
+3, rises for `EARLY_STOPPING_PATIENCE=3` epochs after,
+`restore_best_weights=True` reloads the epoch-3 checkpoint). Per-output
+accuracy at the final logged epoch runs 96.0% (val) at +1s down to 93.0%
+at +7s -- the same degradation shape from +1s to +7s as the earlier
+single-run (`1200_1`) baseline. Not yet evaluated through Step 3 against
+its own held-out split or any cross-run generalization check.
 
 Neither Slurm submission pattern has been exercised on real Slurm
 infrastructure yet -- the per-step templates (`train_model.sbatch`/
