@@ -510,7 +510,7 @@
         "ComputationalWorkflow"
       ],
       "name": "Step 5 (optional): Map migration events",
-      "description": "Matches handover/migration events to vehicle positions by nearest time, groups destinations beyond the top K into 'Otras', and plots events by type and destination cell, optionally overlaid with real BS coordinates (a hand-curated dict, e.g. from your own BS-location analysis or operator/OSM data) and an OSM street-network background. Defaults chain onto this repository's own bundled example slice, so it is runnable out of the box. Local/no-GPU step; not chained by run_pipeline.ipynb.",
+      "description": "Matches handover/migration events to vehicle positions by nearest time, groups destinations beyond the top K into 'Otras', and plots events by type and destination cell, optionally overlaid with real BS coordinates (a hand-curated dict, e.g. from your own BS-location analysis or operator/OSM data) and an OSM street-network background (from a GeoPackage, read with no extra dependency, or a .osm.pbf via pyrosm). Defaults chain onto this repository's own bundled example slice, so it is runnable out of the box. Local/no-GPU step; not chained by run_pipeline.ipynb.",
       "position": 5,
       "conformsTo": {
         "@id": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE"
@@ -537,6 +537,9 @@
         },
         {
           "@id": "#param-bs-coords"
+        },
+        {
+          "@id": "#param-osm-geopackage-path"
         },
         {
           "@id": "#param-osm-pbf-path"
@@ -757,6 +760,13 @@
       "@type": "FormalParameter",
       "name": "Step 4 comparison output",
       "description": "metrics_long.csv, comparison_accuracy_by_output.png, comparison_top2_accuracy_by_output.png, comparison_f1_by_output.png, metrics_summary.csv."
+    },
+    {
+      "@id": "#param-osm-geopackage-path",
+      "@type": "FormalParameter",
+      "name": "OSM_GEOPACKAGE_PATH",
+      "description": "Optional local GeoPackage (.gpkg, or BBBike's own .zip download) for a street-map plot background, read via migration_map.load_osm_lines_from_geopackage (stdlib sqlite3 -- no geopandas/pyrosm dependency). Tried before OSM_PBF_PATH if both are set. None skips the OSM-dependent plot unless OSM_PBF_PATH is set instead.",
+      "defaultValue": "null"
     },
     {
       "@id": "#param-osm-pbf-path",

@@ -43,10 +43,145 @@ attempt to infer that mapping.
 
 from __future__ import annotations
 
+import os
 import re
+import sqlite3
+import struct
+import tempfile
+import zipfile
 
 import numpy as np
 import pandas as pd
+
+
+# Default OSM `highway` tag values pyrosm's `network_type="driving"` covers --
+# used as the default filter for `load_osm_lines_from_geopackage` so both
+# background-map code paths (pyrosm+.osm.pbf, or this module's own
+# GeoPackage reader) draw roughly the same road network by default.
+DRIVING_HIGHWAY_TYPES = (
+    "motorway", "trunk", "primary", "secondary", "tertiary", "unclassified",
+    "residential", "living_street", "service", "track", "road",
+    "motorway_link", "trunk_link", "primary_link", "secondary_link", "tertiary_link",
+)
+
+
+def _read_wkb_geometry(buf: bytes, offset: int = 0) -> tuple[list[list[tuple[float, float]]], int]:
+    """Parse one standard ISO WKB geometry starting at `offset` in `buf`.
+    Only LineString (type 2) and MultiLineString (type 5) are supported --
+    all this module needs. Returns (list_of_linestrings, new_offset); a
+    plain LineString yields a single-element list, a MultiLineString one
+    element per member line."""
+    byte_order = buf[offset]
+    endian = "<" if byte_order == 1 else ">"
+    offset += 1
+    geom_type, = struct.unpack_from(endian + "I", buf, offset)
+    offset += 4
+
+    if geom_type == 2:  # LineString
+        n, = struct.unpack_from(endian + "I", buf, offset)
+        offset += 4
+        pts = []
+        for _ in range(n):
+            x, y = struct.unpack_from(endian + "dd", buf, offset)
+            pts.append((x, y))
+            offset += 16
+        return [pts], offset
+    elif geom_type == 5:  # MultiLineString -- each member is a nested WKB blob
+        n, = struct.unpack_from(endian + "I", buf, offset)
+        offset += 4
+        lines: list[list[tuple[float, float]]] = []
+        for _ in range(n):
+            sub_lines, offset = _read_wkb_geometry(buf, offset)
+            lines.extend(sub_lines)
+        return lines, offset
+    else:
+        raise ValueError(f"unsupported WKB geometry type {geom_type} (only LineString/MultiLineString are)")
+
+
+def _read_gpkg_geometry(blob: bytes) -> list[list[tuple[float, float]]]:
+    """Strip a GeoPackage binary geometry header (magic b"GP" + version +
+    flags byte [byte order, envelope-contents code, ...] + srs_id + an
+    optional envelope, whose length the flags byte's envelope code
+    determines) and parse the standard WKB body that follows it."""
+    if blob[0:2] != b"GP":
+        raise ValueError('not a GeoPackage geometry blob (bad "GP" magic)')
+    flags = blob[3]
+    envelope_code = (flags >> 1) & 0x07
+    envelope_len = {0: 0, 1: 32, 2: 48, 3: 48, 4: 64}[envelope_code]
+    offset = 8 + envelope_len  # 2 (magic) + 1 (version) + 1 (flags) + 4 (srs_id)
+    lines, _ = _read_wkb_geometry(blob, offset)
+    return lines
+
+
+def load_osm_lines_from_geopackage(
+    path: str,
+    *,
+    table: str = "lines",
+    geom_col: str = "geom",
+    highway_types: tuple[str, ...] | None = DRIVING_HIGHWAY_TYPES,
+) -> list[list[tuple[float, float]]]:
+    """
+    Read road-network line geometries out of a GeoPackage exported by
+    BBBike's extract service (https://extract.bbbike.org/, `format=
+    geopackage.zip`) or `ogr2ogr`/osmium's own GeoPackage output -- both
+    use the same schema: a "lines" table (LINESTRING geometry, SRS 4326 /
+    WGS84) with an OSM `highway` tag column, alongside "points"/
+    "multilinestrings"/"multipolygons"/"other_relations" tables this
+    function ignores.
+
+    An alternative to `pyrosm`'s `.osm.pbf` + `OSM.get_network(...)` path
+    (see `step_5_map_migration_events.ipynb`'s `OSM_PBF_PATH` parameter):
+    reads the GeoPackage directly via `sqlite3` + a minimal WKB parser --
+    no `geopandas`/`fiona`/GDAL dependency, since a GeoPackage is just a
+    SQLite database with geometries stored as (a small GeoPackage-specific
+    header) + (standard ISO WKB), both of which the stdlib can decode
+    directly. Useful when `pyrosm` itself is impractical to install (as it
+    was for this project -- see README's "Notes on the source notebooks").
+
+    `path` may be a `.gpkg` file directly, or the `.zip` BBBike actually
+    delivers (auto-extracted into a temporary directory -- BBBike always
+    names the `.gpkg` inside after the extract itself).
+
+    `highway_types`, if given, filters to rows whose `highway` column is
+    one of these values (default: `DRIVING_HIGHWAY_TYPES`, roughly
+    matching pyrosm's own `network_type="driving"` filter) -- pass `None`
+    for every line in the table regardless of `highway` value.
+
+    Returns a list of linestrings, each a list of `(lon, lat)` tuples --
+    directly usable as `plot_events_by_type`'s `edges` argument (which
+    also accepts a geopandas GeoDataFrame, e.g. from pyrosm, and tells the
+    two apart by duck-typing a `.plot` attribute).
+    """
+    if str(path).lower().endswith(".zip"):
+        with zipfile.ZipFile(path) as zf:
+            gpkg_names = [n for n in zf.namelist() if n.lower().endswith(".gpkg")]
+            if not gpkg_names:
+                raise ValueError(f"no .gpkg file found inside {path}")
+            tmp_dir = tempfile.mkdtemp(prefix="fumd_osm_gpkg_")
+            zf.extract(gpkg_names[0], tmp_dir)
+            path = os.path.join(tmp_dir, gpkg_names[0])
+
+    conn = sqlite3.connect(path)
+    try:
+        cur = conn.cursor()
+        cols = [row[1] for row in cur.execute(f"PRAGMA table_info({table})")]
+        other_cols = [c for c in cols if c != geom_col]
+        sql = f"SELECT {', '.join(other_cols)}, {geom_col} FROM {table}"
+        if highway_types is not None and "highway" in other_cols:
+            placeholders = ", ".join("?" for _ in highway_types)
+            sql += f" WHERE highway IN ({placeholders})"
+            rows = cur.execute(sql, highway_types)
+        else:
+            rows = cur.execute(sql)
+
+        lines: list[list[tuple[float, float]]] = []
+        for row in rows:
+            blob = row[-1]
+            if blob is not None:
+                lines.extend(_read_gpkg_geometry(blob))
+        return lines
+    finally:
+        conn.close()
 
 
 def match_events_to_positions(
@@ -142,9 +277,12 @@ def plot_events_by_type(
     Grid of subplots, one per event `case_short`, scattering matched event
     positions colored by `bs_group`. Optionally overlays `bs_coords`
     (`{cell_id: (lon, lat)}`, a hand-curated dict of known site
-    coordinates) and a street network (`edges`, from `pyrosm`'s
-    `OSM.get_network(...)`, plotted first as a gray background if given --
-    both fully optional so this works with only simulation output.
+    coordinates) and a street network (`edges`), plotted first as a gray
+    background if given -- both fully optional so this works with only
+    simulation output. `edges` accepts either a geopandas GeoDataFrame
+    (e.g. from `pyrosm`'s `OSM.get_network(...)`, duck-typed via a `.plot`
+    attribute) or a plain list of linestrings -- each a list of `(x, y)`
+    tuples -- such as `load_osm_lines_from_geopackage`'s return value.
     """
     import matplotlib.pyplot as plt
 
@@ -158,7 +296,11 @@ def plot_events_by_type(
         r, c = divmod(i, cols)
         ax = axes[r][c]
         if edges is not None:
-            edges.plot(ax=ax, linewidth=0.5, color="gray", alpha=0.7)
+            if hasattr(edges, "plot"):
+                edges.plot(ax=ax, linewidth=0.5, color="gray", alpha=0.7)
+            else:
+                from matplotlib.collections import LineCollection
+                ax.add_collection(LineCollection(edges, linewidth=0.5, color="gray", alpha=0.7))
         sub = ev[ev["case_short"] == case]
         for g in order_groups:
             sub_g = sub[sub["bs_group"] == g]

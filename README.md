@@ -53,7 +53,7 @@ workflow's own output and needs no GPU.
 | 2 | `step_2_train_model.ipynb` | Build and train the BiLSTM + Bahdanau-attention forecaster on Step 1's windows. | Step 1 output | `model.keras`, `training_history.json`, `training_curves.png` | **yes** |
 | 3 | `step_3_evaluate_model.ipynb` | Evaluate on the run's own validation split (+ a `migration`-state accuracy breakdown), and optionally on other datasets for a cross-run generalization check. | Step 2 output | `metrics_<run_label>.csv`/`.json` | yes (predict-only) |
 | 4 | `step_4_aggregate_training_metrics.ipynb` | Compare Step 3 metrics across runs/variants -- tables and plots. | one or more Step 3 output dirs | `metrics_long.csv`, `metrics_summary.csv`, comparison plots | no |
-| 5 *(optional)* | `step_5_map_migration_events.ipynb` | Plot handover/migration events by type and destination cell over vehicle positions, optionally with real BS coordinates and a street map. | preprocessing's own `dataset_labeled_w<W>.csv` + `events_all_w<W>.csv` | `migration_events_by_type.pdf` | no |
+| 5 *(optional)* | `step_5_map_migration_events.ipynb` | Plot handover/migration events by type and destination cell over vehicle positions, optionally with real BS coordinates and a street map (a GeoPackage or a `.osm.pbf` extract). | preprocessing's own `dataset_labeled_w<W>.csv` + `events_all_w<W>.csv` | `migration_events_by_type.pdf` | no |
 
 `run_pipeline.ipynb` chains Steps 1-5 for local/interactive use (see
 "Execution environment" for why it isn't meant for the Slurm-submitted GPU
@@ -142,6 +142,32 @@ include actual `migration` events so Step 1's sliding windows and Step 3's
 migration-state accuracy breakdown both have something to show.
 `example-data/events_all_example.csv` is the matching slice of that run's
 `events_all_w3.csv`, for Step 5.
+
+## Street-map backgrounds (Step 5)
+
+`plot_events_by_type`'s optional gray street-network background (behind
+the colored event scatter points) accepts either of two bring-your-own
+data sources -- neither is required, the plot works fine on bare
+simulation coordinates without one:
+
+- **`OSM_GEOPACKAGE_PATH`** (recommended): a GeoPackage covering your
+  event area, e.g. from [BBBike's extract service](https://extract.bbbike.org/)
+  (draw or type a small bounding box, choose `format=geopackage.zip`) --
+  BBBike's own `.zip` download works directly, no need to unzip it first.
+  Read via `migration_map.load_osm_lines_from_geopackage`, which parses
+  the GeoPackage's SQLite + WKB geometry encoding directly with the
+  stdlib (`sqlite3` + `struct`) -- **no extra dependency** (no
+  `geopandas`/`fiona`/GDAL), and no separate download step for a whole
+  country/region the way a `.osm.pbf` extract usually needs, since
+  BBBike's service crops to exactly the bounding box you give it.
+- **`OSM_PBF_PATH`**: a `.osm.pbf` extract (e.g. from
+  [Geofabrik](https://download.geofabrik.de/)), read via `pyrosm`. Kept
+  for parity with the original `estimacion_antenas.ipynb`-derived
+  approach, but `pyrosm` wasn't straightforward to `pip install` in this
+  project's own testing (see "Notes on the source notebooks" below) --
+  `OSM_GEOPACKAGE_PATH` is the easier path for most users.
+
+If both are set, `OSM_GEOPACKAGE_PATH` is tried first.
 
 ## Repository layout
 
@@ -334,6 +360,19 @@ identical faceted/grouped bar charts, no seaborn import anywhere in
 `requirements/train.txt`'s dependency closure now). Steps 2-3 (the only
 ones that actually run inside the .sif, per `slurm/*.sbatch`) never
 depended on seaborn in the first place.
+
+Also added a second, dependency-free way to get a real street-map
+background for Step 5's event maps: `migration_map.
+load_osm_lines_from_geopackage` reads a GeoPackage (e.g. from BBBike's
+extract service) directly via stdlib `sqlite3` + a minimal WKB parser --
+no `geopandas`/`fiona`/GDAL needed, unlike the existing `pyrosm`+
+`.osm.pbf` path (`OSM_PBF_PATH`), which wasn't straightforward to
+`pip install` earlier in this project's own testing (see "conda install
+-c conda-forge pyrosm worked" above). See "Street-map backgrounds
+(Step 5)" for both options; verified against a real BBBike GeoPackage
+extract of the `1000_1` run's event area (659 road segments after
+filtering to driving-relevant `highway` tags) and the actual matched
+events -- clean overlay, no change needed to the x-axis tick fix above.
 
 **v0.1.0** initial release: rebuilds the five exploratory notebooks listed
 above as this parameterized pipeline. See "Notes on the source notebooks"
