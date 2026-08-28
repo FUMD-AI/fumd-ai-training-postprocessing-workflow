@@ -15,9 +15,10 @@
 #      `jupyter execute` itself has no -p/parameter flag (unlike papermill);
 #      see src/fumd_training_workflow/notebook_runner.py's env_override()
 #      docstring for exact value-parsing rules.
-#   2. Point IMAGE below at your built .sif (matching the pinned
-#      requirements/train.txt environment) and REPO_DIR at this
-#      repository's root on the cluster's filesystem.
+#   2. IMAGE below already points at the built .sif on this cluster
+#      (matching the pinned requirements/train.txt environment); update it
+#      if that path changes. Point REPO_DIR at this repository's root on
+#      the cluster's filesystem.
 #   3. Adjust --nodelist (or drop it and let Slurm schedule any GPU node)
 #      and --cpus-per-task for your cluster.
 
@@ -29,7 +30,7 @@
 #SBATCH --nodelist=gpgpu01
 
 REPO_DIR=.                              # this repository's root
-IMAGE=image_jupiter_eosc.sif            # built from requirements/train.txt (see README)
+IMAGE=/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif            # built from requirements/train.txt (see README)
 
 # Optional: override this run's parameters instead of hand-editing the
 # notebook (any parameter name from its parameters cell works the same way):

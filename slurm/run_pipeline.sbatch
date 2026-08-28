@@ -37,15 +37,16 @@
 #      temporarily unsets each parameter it explicitly injects so an
 #      ambient env var like OUTPUT_DIR can't leak into a child step's own
 #      differently-scoped parameter of the same name).
-#   2. Point IMAGE below at your built .sif (matching the pinned
-#      requirements/train.txt environment; Step 5's own deps --
-#      pandas/numpy/matplotlib -- are already in that image too, so no
-#      second image is needed for this single-job chain. The GeoPackage
-#      street-map path, OSM_GEOPACKAGE_PATH, works here since it's plain
-#      stdlib sqlite3; pyrosm/OSM_PBF_PATH does NOT, since pyrosm isn't
-#      part of requirements/train.txt -- see README's "Notes on the source
-#      notebooks" for why pyrosm was never straightforward to install) and
-#      REPO_DIR at this repository's root on the cluster's filesystem.
+#   2. IMAGE below already points at the built .sif on this cluster
+#      (matching the pinned requirements/train.txt environment; Step 5's
+#      own deps -- pandas/numpy/matplotlib -- are already in that image
+#      too, so no second image is needed for this single-job chain. The
+#      GeoPackage street-map path, OSM_GEOPACKAGE_PATH, works here since
+#      it's plain stdlib sqlite3; pyrosm/OSM_PBF_PATH does NOT, since
+#      pyrosm isn't part of requirements/train.txt -- see README's "Notes
+#      on the source notebooks" for why pyrosm was never straightforward
+#      to install). Update IMAGE if that path changes, and point REPO_DIR
+#      at this repository's root on the cluster's filesystem.
 #   3. Adjust --nodelist (or drop it and let Slurm schedule any GPU node),
 #      --cpus-per-task, and --time for your cluster -- this job runs
 #      longer than train_model.sbatch alone (all five steps, not just
@@ -61,7 +62,7 @@
 #SBATCH --nodelist=gpgpu01
 
 REPO_DIR=.                              # this repository's root
-IMAGE=image_jupiter_eosc.sif            # built from requirements/train.txt (see README)
+IMAGE=/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif    # built from requirements/train.txt (see README)
 
 # Optional: override this run's parameters instead of hand-editing the
 # notebook (any parameter name from run_pipeline.ipynb's parameters cell

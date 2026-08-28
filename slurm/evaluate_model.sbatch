@@ -9,8 +9,9 @@
 # CROSS_RUN_DATASET_PATHS, ...) either by editing
 # step_3_evaluate_model.ipynb's own "parameters" cell, or by exporting
 # environment variables of the same name below the REPO_DIR/IMAGE lines --
-# see train_model.sbatch's header comment for why this works. Also update
-# IMAGE/REPO_DIR/--nodelist as in train_model.sbatch.
+# see train_model.sbatch's header comment for why this works. IMAGE below
+# already points at the built .sif on this cluster -- update it (and
+# REPO_DIR/--nodelist) as in train_model.sbatch if that changes.
 
 #SBATCH --job-name fumd_evaluate_model
 #SBATCH --output logs/evaluate_model_%j.out
@@ -20,7 +21,7 @@
 #SBATCH --nodelist=gpgpu01
 
 REPO_DIR=.
-IMAGE=image_jupiter_eosc.sif
+IMAGE=/home/hpc/users/sonja.filiposka/image_jupiter_eosc.sif
 
 # Optional: override this run's parameters (see train_model.sbatch):
 # export RUN_DIR=/absolute/path/on/cluster/pipeline_run
