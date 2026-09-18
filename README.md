@@ -26,6 +26,21 @@ local/interactive use, or submit the whole chain to Slurm as one job:
 sbatch slurm/run_pipeline.sbatch   # GPU -- all five steps, one job
 ```
 
+To run every available dataset run at once -- locally, no Slurm involved,
+each one taking a turn as the main dataset with every other run as its
+cross-run generalization check, plus a combined-dataset track (trained on
+every `_1` run, with the held-out `_2`/`_3` runs as its own cross-run
+check -- see "Optional: combining datasets for training (Step 1b)" below)
+-- `run_all_datasets.sh` wraps the plain `jupyter execute`
+invocation above in a discovery loop over a `datasets/` folder (see
+"Execution environment" below for the parallel Slurm version of this same
+idea, `slurm/submit_all_runs.sh`):
+
+```
+DRY_RUN=1 bash run_all_datasets.sh   # always check this output first
+bash run_all_datasets.sh             # then actually run everything
+```
+
 Or submit the GPU steps individually instead (finer-grained -- see
 "Execution environment" below for the tradeoff between the two):
 
@@ -168,6 +183,25 @@ invocation (just against a different notebook):
   on a contended queue; simpler to submit and reason about (one job, one
   log) is the upside. This chaining/GPU-inheritance claim has since been
   confirmed on real Slurm infrastructure -- see "Validation status" below.
+
+For running every available dataset run at once (each one taking a turn as
+the main `DATASET_PATH`, every other run as its `CROSS_RUN_DATASET_PATHS`
+generalization check, plus a combined-dataset track trained on every `_1`
+run with the held-out `_2`/`_3` runs as its own
+`COMBINE_CROSS_RUN_DATASET_PATHS` check -- see "Optional: combining
+datasets for training (Step 1b)" above), `slurm/submit_all_runs.sh` wraps
+`run_pipeline.sbatch` in a discovery loop
+instead of hand-writing one `export`/`sbatch` invocation per run: it scans
+`DATASETS_DIR` for every subfolder containing a `dataset_labeled_w<W>.csv`,
+then submits one job per run found (`DRY_RUN=1 bash
+slurm/submit_all_runs.sh` prints every `sbatch` invocation it would make
+without submitting anything -- always run this first and check the
+discovered run list and generated paths, since a mistake here costs real
+GPU time across potentially a dozen-plus jobs). See its own header comment
+for every override (`DATASETS_DIR`, `W`, `EPOCHS`, `FIRST_RUN_TIME`,
+`COMBINE_CROSS_RUN_CHECKS`). Newly added and checked with a synthetic
+12-folder dataset layout, not yet run against real data on real Slurm
+infrastructure -- confirm with `DRY_RUN=1` first.
 
 `run_pipeline.sbatch` and `evaluate_model.sbatch` -- the two templates
 whose notebooks take raw `dataset_labeled_w<W>.csv`/`events_all_w<W>.csv`
@@ -351,6 +385,9 @@ If both are set, `OSM_GEOPACKAGE_PATH` is tried first.
 ├── README.md
 ├── CITATION.cff                 citation metadata (GitHub/Zenodo citation widget)
 ├── run_pipeline.ipynb            local/interactive orchestrator: runs Steps 1-5 (+ optional combined-dataset track) in one call
+├── run_all_datasets.sh          local, no-Slurm equivalent of slurm/submit_all_runs.sh --
+│                                  runs run_pipeline.ipynb once per dataset run under
+│                                  DATASETS_DIR, each taking a turn as the main dataset
 ├── LICENSE.txt                  MIT (source code)
 ├── LICENSE-CC-BY-4.0.txt        CC BY 4.0 (explanatory text/figures)
 ├── ro-crate-metadata.json       FAIR/WorkflowHub packaging metadata
@@ -360,7 +397,13 @@ If both are set, `OSM_GEOPACKAGE_PATH` is tried first.
 ├── slurm/
 │   ├── train_model.sbatch        Step 2 Slurm/Singularity submission template
 │   ├── evaluate_model.sbatch     Step 3 Slurm/Singularity submission template
-│   └── run_pipeline.sbatch       Steps 1-5 chained, one Slurm/Singularity job
+│   ├── run_pipeline.sbatch       Steps 1-5 chained, one Slurm/Singularity job
+│   └── submit_all_runs.sh        submits one run_pipeline.sbatch job per
+│                                  dataset run under DATASETS_DIR (each run
+│                                  taking a turn as the main dataset, every
+│                                  other run as its cross-run check), plus
+│                                  the combined-dataset track for the first
+│                                  run -- see its own header comment
 ├── example-data/
 │   ├── dataset_labeled_example.csv
 │   ├── events_all_example.csv
@@ -907,6 +950,14 @@ See `LICENSE.txt` (MIT, code) and `LICENSE-CC-BY-4.0.txt` (CC BY 4.0, text/figur
 
 This work has been funded by the FUMD-AI project, an EOSC GRAVITY - Inter
 Project with Grant Number 25-EOSC-GRV-INTER-013.
+
+We gratefully acknowledge Polish high-performance computing infrastructure
+PLGrid (HPC Centers: ACK Cyfronet AGH) for providing computer facilities and
+support within computational grant no. PLGINT/2026/019844.
+
+The research work was supported by the Open Science Cloud research laboratory
+(OSC-LAB) at the Faculty of Computer Science and Engineering (FINKI), Ss.
+Cyril and Methodius University in Skopje, North Macedonia.
 
 ## Citation
 
