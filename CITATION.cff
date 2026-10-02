@@ -43,4 +43,4 @@ abstract: >-
   (run_pipeline.ipynb) and Slurm/Singularity submission templates for the
   GPU training/evaluation steps.
 repository-code: "https://github.com/FUMD-AI/fumd-ai-training-postprocessing-workflow"
-# doi: "<add DOI here once registered/archived, e.g. via WorkflowHub/Zenodo>"
+# doi: "https://doi.org/10.48546/workflowhub.workflow.2312.1"
