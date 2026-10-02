@@ -962,9 +962,7 @@ Cyril and Methodius University in Skopje, North Macedonia.
 ## Citation
 
 Please cite this workflow if you use it. See `CITATION.cff` and
-`ro-crate-metadata.json` for structured citation/author metadata -- a DOI
-slot is reserved in both, to be filled in once the workflow is registered
-on WorkflowHub.
+`ro-crate-metadata.json` for structured citation/author metadata
 
 ## FAIR / WorkflowHub packaging
 
